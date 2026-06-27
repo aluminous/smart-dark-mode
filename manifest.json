@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Dark Mode",
+  "version": "0.1.0",
+  "description": "Automatically darkens mostly-light pages and lets you persist a per-site override.",
+  "permissions": ["storage", "activeTab", "contextMenus", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "scripts": ["src/background.js"]
+  },
+  "action": {
+    "default_title": "Auto Dark Mode",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.svg",
+      "32": "icons/icon-32.svg",
+      "48": "icons/icon-48.svg",
+      "128": "icons/icon-128.svg"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/color.js", "src/content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

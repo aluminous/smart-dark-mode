@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dynamic fixture</title>
+  <style>
+    body { margin: 2rem; font-family: system-ui, sans-serif; color: #222; background: #f6f6f6; }
+    .card { margin: 1rem 0; padding: 1rem; background: #ffffff; border: 1px solid #cccccc; color: #333366; }
+  </style>
+</head>
+<body>
+  <h1>Dynamic content</h1>
+  <p>New cards should be transformed after they are added.</p>
+  <button id="add">Add card</button>
+  <div id="cards"><div class="card">Initial card</div></div>
+  <script>
+    let count = 1;
+    document.getElementById('add').addEventListener('click', () => {
+      count += 1;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.textContent = `Added card ${count}`;
+      document.getElementById('cards').appendChild(card);
+    });
+  </script>
+</body>
+</html>

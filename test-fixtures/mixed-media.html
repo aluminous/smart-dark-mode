@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Mixed media fixture</title>
+  <style>
+    body { margin: 2rem; font-family: system-ui, sans-serif; color: #202020; background: #fbfbfb; }
+    .panel { padding: 1rem; background: #fff4d8; border: 2px solid #d68a00; }
+    img, canvas { display: block; margin: 1rem 0; border: 1px solid #888; }
+  </style>
+</head>
+<body>
+  <h1>Mixed media</h1>
+  <div class="panel">The surrounding page should darken, but the image and canvas should be skipped.</div>
+  <img alt="Inline SVG sample" width="220" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Crect width='220' height='120' fill='%23ffcc33'/%3E%3Ccircle cx='70' cy='60' r='40' fill='%23006bd6'/%3E%3Crect x='120' y='25' width='70' height='70' fill='%23d60054'/%3E%3C/svg%3E">
+  <canvas id="canvas" width="220" height="120"></canvas>
+  <script>
+    const ctx = document.getElementById('canvas').getContext('2d');
+    ctx.fillStyle = '#ffcc33';
+    ctx.fillRect(0, 0, 220, 120);
+    ctx.fillStyle = '#006bd6';
+    ctx.beginPath();
+    ctx.arc(70, 60, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#d60054';
+    ctx.fillRect(120, 25, 70, 70);
+  </script>
+</body>
+</html>
