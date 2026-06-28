@@ -2,6 +2,7 @@
   "name": "smart-dark-mode-extension",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "validate": "node --check src/color.js && node --check src/content.js && node --check src/background.js && node --check src/popup.js && node --check scripts/prepare-build.mjs && python3 -m json.tool manifest.json >/dev/null && python3 -m json.tool manifests/manifest.firefox.json >/dev/null && python3 -m json.tool manifests/manifest.chrome.json >/dev/null",

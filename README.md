@@ -42,7 +42,7 @@ npm run run:firefox
 
 The root `manifest.json` is the Firefox development manifest. Browser-specific release manifests live in `manifests/`:
 
-- `manifests/manifest.firefox.json` uses Firefox MV3 `background.scripts` and includes the Gecko ID `smart-dark-mode@alumino.us`.
+- `manifests/manifest.firefox.json` uses Firefox MV3 `background.scripts`, includes the Gecko ID `smart-dark-mode@alumino.us`, and declares no data collection.
 - `manifests/manifest.chrome.json` uses Chrome MV3 `background.service_worker`.
 
 Install development dependencies first if you want `web-ext` commands:
@@ -105,3 +105,7 @@ Manual fixtures are in `test-fixtures/`:
 ## Known limitations
 
 This implementation intentionally uses a simple page-level CSS filter. It is broad and consistent, but exception elements may not always be perfectly restored, especially with nested filtered content, cross-origin iframes, CSS background images, or complex compositing.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
