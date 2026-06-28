@@ -1,36 +1,65 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
   <script src="popup.js" defer></script>
 </head>
 <body>
-  <h1>Smart Dark Mode</h1>
+  <header class="hero">
+    <img class="mark" src="../icons/icon-32.png" alt="" aria-hidden="true">
+    <h1 data-i18n="extensionName">Smart Dark Mode</h1>
+  </header>
 
-  <label class="row switch-row">
-    <span>
-      <strong>Enabled globally</strong>
-      <small>Turn extension behavior on or off everywhere.</small>
-    </span>
-    <input id="global-enabled" type="checkbox">
-  </label>
-
-  <section>
-    <div class="section-title">This site</div>
-    <div id="site-label" class="site">Loading...</div>
-
-    <label class="option">
-      <input type="radio" name="site-mode" value="auto">
-      <span>Automatic (Dark)</span>
+  <section class="panel global-panel" aria-labelledby="global-title">
+    <label class="setting-row primary-toggle">
+      <span>
+        <strong id="global-title" data-i18n="popupEnabledGlobally">Enabled globally</strong>
+        <small data-i18n="popupEnabledGloballyDescription">Turn extension behavior on or off everywhere.</small>
+      </span>
+      <input id="global-enabled" type="checkbox">
     </label>
-    <label class="option">
-      <input type="radio" name="site-mode" value="inverted">
-      <span>Force inverted</span>
+  </section>
+
+  <section class="panel site-panel" aria-labelledby="site-title">
+    <div class="section-heading">
+      <div>
+        <div id="site-title" class="section-title" data-i18n="popupThisSite">This site</div>
+        <div id="site-label" class="site" data-i18n="popupLoading">Loading...</div>
+      </div>
+    </div>
+
+    <div class="mode-group">
+      <label class="mode-option">
+        <input type="radio" name="site-mode" value="auto">
+        <span data-i18n="popupAutomaticDark">Automatic (Dark)</span>
+      </label>
+      <label class="mode-option">
+        <input type="radio" name="site-mode" value="inverted">
+        <span data-i18n="popupForceInverted">Force inverted</span>
+      </label>
+      <label class="mode-option">
+        <input type="radio" name="site-mode" value="original">
+        <span data-i18n="popupForceOriginal">Force original</span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+
+    <label class="setting-row">
+      <span>
+        <strong data-i18n="popupInvertImages">Invert images</strong>
+        <small data-i18n="popupInvertImagesDescription">Leave media inverted with the page instead of restoring original colors.</small>
+      </span>
+      <input id="invert-images" type="checkbox">
     </label>
-    <label class="option">
-      <input type="radio" name="site-mode" value="original">
-      <span>Force original</span>
+
+    <label class="setting-row">
+      <span>
+        <strong data-i18n="popupImproveContrast">Improve contrast</strong>
+        <small data-i18n="popupImproveContrastDescription">Slightly boost brightness and contrast while inverted.</small>
+      </span>
+      <input id="improve-contrast" type="checkbox">
     </label>
   </section>
 

@@ -35,7 +35,10 @@ npm run run:firefox
 - Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
-- The popup can set the current site to Automatic (Dark), Force inverted, or Force original.
+- The popup keeps the global enable/disable control separate from current-site controls.
+- Per-site controls choose whether images/media are restored to original colors or inverted with the page.
+- Per-site controls can enable a slight brightness/contrast boost while pages are inverted.
+- Per-site controls can set the current site to Automatic (Dark), Force inverted, or Force original.
 - Right-click the toolbar button and choose **Reset site to Automatic (Dark)** to remove the site override.
 
 ## Manifests and packaging
@@ -44,6 +47,7 @@ The root `manifest.json` is the Firefox development manifest. Browser-specific r
 
 - `manifests/manifest.firefox.json` uses Firefox MV3 `background.scripts`, includes the Gecko ID `smart-dark-mode@alumino.us`, and declares no data collection.
 - `manifests/manifest.chrome.json` uses Chrome MV3 `background.service_worker`.
+- `_locales/` provides English and Korean localization.
 
 Install development dependencies first if you want `web-ext` commands:
 
@@ -58,6 +62,8 @@ npm run stage:firefox  # build/firefox
 npm run stage:chrome   # build/chrome
 npm run stage            # both build directories
 ```
+
+PNG toolbar icons are generated from the SVG sources automatically during staging/builds with `npm run icons`.
 
 Package release archives with `web-ext`:
 
@@ -74,7 +80,6 @@ The `package:*` scripts are aliases for the corresponding `build:*` scripts.
 
 ```sh
 npm run lint:firefox
-npm run lint:chrome
 npm run run:firefox
 npm run run:chrome
 npm run package:firefox
@@ -87,12 +92,11 @@ npm run package:chrome
 
 Open pages listen for extension storage changes, so global and per-site settings apply to already-open tabs without requiring the broad `tabs` permission.
 
-Run validation and linting with:
+Run validation and Firefox linting with:
 
 ```sh
 npm run validate
 npm run lint:firefox
-npm run lint:chrome
 ```
 
 Manual fixtures are in `test-fixtures/`:

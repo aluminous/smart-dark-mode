@@ -4,6 +4,10 @@ const api = typeof browser !== "undefined" ? browser : chrome;
 const RESET_MENU_ID = "smart-dark-mode-reset-site";
 const tabStates = new Map();
 
+function message(name, substitutions) {
+  return api.i18n.getMessage(name, substitutions) || name;
+}
+
 function originFromUrl(url) {
   try {
     const parsed = new URL(url);
@@ -60,23 +64,23 @@ async function updateAction(tabId, origin, state = {}) {
   const automaticWouldDarken = Boolean(state.automaticWouldDarken);
 
   let badge = "A";
-  let title = "Smart Dark Mode: automatic";
+  let title = message("actionAutomatic");
   let color = "#666666";
 
   if (!globalEnabled) {
     badge = "OFF";
-    title = "Smart Dark Mode: globally disabled";
+    title = message("actionDisabled");
     color = "#8f2f2f";
   } else if (override === "inverted") {
     badge = "I";
-    title = "Smart Dark Mode: forced inverted for this site";
+    title = message("actionForcedInverted");
     color = "#111111";
   } else if (override === "original") {
     badge = "O";
-    title = "Smart Dark Mode: forced original for this site";
+    title = message("actionForcedOriginal");
     color = "#d8d8d8";
   } else if (active || automaticWouldDarken) {
-    title = "Smart Dark Mode: automatic, inverted this page";
+    title = message("actionAutomaticInverted");
     color = "#234f8f";
   }
 
@@ -92,7 +96,7 @@ async function reevaluateTab(tabId) {
 api.runtime.onInstalled.addListener(() => {
   api.contextMenus.create({
     id: RESET_MENU_ID,
-    title: "Reset site to Automatic (Dark)",
+    title: message("contextResetSite"),
     contexts: ["action"]
   });
 });
@@ -105,7 +109,9 @@ api.runtime.onMessage.addListener((message, sender) => {
     active: Boolean(message.active),
     automaticWouldDarken: Boolean(message.automaticWouldDarken),
     override: normalizeOverride(message.override),
-    globalEnabled: message.globalEnabled !== false
+    globalEnabled: message.globalEnabled !== false,
+    invertImages: message.invertImages === true,
+    improveContrast: message.improveContrast === true
   });
   updateAction(tabId, message.origin, tabStates.get(tabId));
   return undefined;
@@ -123,10 +129,15 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 api.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || (!changes.globalEnabled && !changes.siteOverrides)) return;
+  if (areaName !== "local" || (!changes.globalEnabled && !changes.siteOverrides && !changes.siteSettings)) return;
   for (const [tabId, state] of tabStates) {
     const nextState = { ...state };
     if (changes.globalEnabled) nextState.globalEnabled = changes.globalEnabled.newValue !== false;
+    if (changes.siteSettings && state.origin) {
+      const siteSettings = changes.siteSettings.newValue?.[state.origin] || {};
+      nextState.invertImages = siteSettings.invertImages === true;
+      nextState.improveContrast = siteSettings.improveContrast === true;
+    }
     if (changes.siteOverrides && state.origin) {
       nextState.override = normalizeOverride(changes.siteOverrides.newValue?.[state.origin]);
     }

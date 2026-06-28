@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const commonFiles = ["src", "icons", "README.md"];
+const commonFiles = ["src", "icons", "_locales", "README.md", "LICENSE"];
 const targets = {
   firefox: "manifests/manifest.firefox.json",
   chrome: "manifests/manifest.chrome.json"

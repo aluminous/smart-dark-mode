@@ -5,6 +5,8 @@
   const Color = globalThis.AutoDarkColor;
   const STYLE_ID = "auto-dark-mode-style";
   const ROOT_ATTR = "data-auto-dark-mode";
+  const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
+  const CONTRAST_ATTR = "data-auto-dark-mode-contrast";
   const LIGHT_THRESHOLD = 0.55;
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
@@ -22,6 +24,8 @@
   let active = false;
   let currentOverride = "auto";
   let globalEnabled = true;
+  let invertImages = false;
+  let improveContrast = false;
   let automaticWouldDarken = false;
   let evaluationStarted = false;
 
@@ -39,11 +43,16 @@
 
   async function getSiteState() {
     const key = originKey();
-    const result = await api.storage.local.get(["globalEnabled", "siteOverrides", "siteLastStates"]);
-    const enabled = result.globalEnabled !== false;
-    if (!key) return { globalEnabled: enabled, override: "auto", lastActive: false };
+    const result = await api.storage.local.get(["globalEnabled", "siteOverrides", "siteLastStates", "siteSettings"]);
+    const siteSettings = key ? result.siteSettings?.[key] || {} : {};
+    const sharedState = {
+      globalEnabled: result.globalEnabled !== false,
+      invertImages: siteSettings.invertImages === true,
+      improveContrast: siteSettings.improveContrast === true
+    };
+    if (!key) return { ...sharedState, override: "auto", lastActive: false };
     return {
-      globalEnabled: enabled,
+      ...sharedState,
       override: normalizeOverride(result.siteOverrides?.[key]),
       lastActive: Boolean(result.siteLastStates?.[key]?.active)
     };
@@ -122,17 +131,30 @@
         filter: invert(1) hue-rotate(180deg) !important;
       }
 
-      html[${ROOT_ATTR}="active"] ${EXCEPTION_SELECTOR} {
+      html[${ROOT_ATTR}="active"][${CONTRAST_ATTR}="true"] {
+        filter: invert(1) hue-rotate(180deg) brightness(1.06) contrast(1.08) !important;
+      }
+
+      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
         filter: invert(1) hue-rotate(180deg) !important;
+      }
+
+      html[${ROOT_ATTR}="active"][${CONTRAST_ATTR}="true"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
+        filter: contrast(0.93) brightness(0.94) invert(1) hue-rotate(180deg) !important;
       }
     `;
     (document.head || document.documentElement).appendChild(style);
   }
 
+  function updateRootSettings() {
+    document.documentElement.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
+    document.documentElement.setAttribute(CONTRAST_ATTR, String(improveContrast));
+  }
+
   function applyDarkMode() {
-    if (active) return;
     active = true;
     ensureGlobalStyle();
+    updateRootSettings();
     document.documentElement.setAttribute(ROOT_ATTR, "active");
   }
 
@@ -146,6 +168,8 @@
     if (evaluationStarted) return;
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
+    invertImages = state.invertImages;
+    improveContrast = state.improveContrast;
     const shouldPreapply = globalEnabled && (state.override === "inverted" || (state.override === "auto" && state.lastActive));
     if (!shouldPreapply || state.override === "original") return;
     applyDarkMode();
@@ -154,6 +178,8 @@
   function removeDarkMode() {
     active = false;
     document.documentElement.removeAttribute(ROOT_ATTR);
+    document.documentElement.removeAttribute(INVERT_IMAGES_ATTR);
+    document.documentElement.removeAttribute(CONTRAST_ATTR);
     removeGlobalStyle();
   }
 
@@ -165,7 +191,9 @@
         active,
         automaticWouldDarken,
         override: currentOverride,
-        globalEnabled
+        globalEnabled,
+        invertImages,
+        improveContrast
       });
     } catch (_error) {
       // Background may be unavailable during extension reloads.
@@ -177,7 +205,8 @@
     const state = await getSiteState();
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
-    const wasActive = active;
+    invertImages = state.invertImages;
+    improveContrast = state.improveContrast;
     if (!globalEnabled) {
       automaticWouldDarken = false;
       removeDarkMode();
@@ -202,9 +231,11 @@
     if (areaName !== "local") return;
     const key = originKey();
     const globalChanged = Boolean(changes.globalEnabled);
+    const visualSettingChanged = key && Boolean(changes.siteSettings) &&
+      JSON.stringify(changes.siteSettings.oldValue?.[key] || {}) !== JSON.stringify(changes.siteSettings.newValue?.[key] || {});
     const siteOverrideChanged = key && Boolean(changes.siteOverrides) &&
       changes.siteOverrides.oldValue?.[key] !== changes.siteOverrides.newValue?.[key];
-    if (globalChanged || siteOverrideChanged) evaluate();
+    if (globalChanged || visualSettingChanged || siteOverrideChanged) evaluate();
   });
 
   preapplyFromStoredState();

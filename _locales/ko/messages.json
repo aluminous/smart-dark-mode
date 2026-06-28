@@ -1,0 +1,94 @@
+{
+  "extensionName": {
+    "message": "스마트 다크 모드"
+  },
+  "extensionDescription": {
+    "message": "대부분 밝은 페이지를 자동으로 어둡게 만들고 사이트별 설정을 저장합니다."
+  },
+  "popupEnabledGlobally": {
+    "message": "전체 사용"
+  },
+  "popupEnabledGloballyDescription": {
+    "message": "모든 사이트에서 확장 기능 동작을 켜거나 끕니다."
+  },
+  "popupInvertImages": {
+    "message": "이미지 반전"
+  },
+  "popupInvertImagesDescription": {
+    "message": "미디어를 원래 색으로 복원하지 않고 페이지와 함께 반전합니다."
+  },
+  "popupImproveContrast": {
+    "message": "대비 개선"
+  },
+  "popupImproveContrastDescription": {
+    "message": "반전된 상태에서 밝기와 대비를 약간 높입니다."
+  },
+  "popupThisSite": {
+    "message": "이 사이트"
+  },
+  "popupLoading": {
+    "message": "불러오는 중..."
+  },
+  "popupAutomaticDark": {
+    "message": "자동 (어둡게)"
+  },
+  "popupForceInverted": {
+    "message": "강제 반전"
+  },
+  "popupForceOriginal": {
+    "message": "원본 유지"
+  },
+  "popupSiteUnavailable": {
+    "message": "이 페이지에서는 사이트 설정을 사용할 수 없습니다."
+  },
+  "popupEnabledEverywhere": {
+    "message": "모든 사이트에서 사용"
+  },
+  "popupDisabledEverywhere": {
+    "message": "모든 사이트에서 사용 안 함"
+  },
+  "popupImagesInverted": {
+    "message": "이미지가 페이지와 함께 반전됩니다"
+  },
+  "popupImagesRestored": {
+    "message": "이미지가 원래 색을 유지합니다"
+  },
+  "popupContrastImproved": {
+    "message": "대비 향상이 켜졌습니다"
+  },
+  "popupContrastNormal": {
+    "message": "대비 향상이 꺼졌습니다"
+  },
+  "popupSiteAutomatic": {
+    "message": "사이트를 자동 모드로 재설정했습니다"
+  },
+  "popupSiteSet": {
+    "message": "사이트를 $MODE$ 모드로 설정했습니다",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupCouldNotLoad": {
+    "message": "설정을 불러올 수 없습니다."
+  },
+  "contextResetSite": {
+    "message": "사이트를 자동 (어둡게)으로 재설정"
+  },
+  "actionAutomatic": {
+    "message": "스마트 다크 모드: 자동"
+  },
+  "actionDisabled": {
+    "message": "스마트 다크 모드: 전체 사용 안 함"
+  },
+  "actionForcedInverted": {
+    "message": "스마트 다크 모드: 이 사이트 강제 반전"
+  },
+  "actionForcedOriginal": {
+    "message": "스마트 다크 모드: 이 사이트 원본 유지"
+  },
+  "actionAutomaticInverted": {
+    "message": "스마트 다크 모드: 자동, 이 페이지 반전됨"
+  }
+}

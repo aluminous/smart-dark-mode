@@ -2,12 +2,25 @@
 
 const api = typeof browser !== "undefined" ? browser : chrome;
 const globalEnabledInput = document.getElementById("global-enabled");
+const invertImagesInput = document.getElementById("invert-images");
+const improveContrastInput = document.getElementById("improve-contrast");
 const siteLabel = document.getElementById("site-label");
 const status = document.getElementById("status");
 const siteModeInputs = Array.from(document.querySelectorAll("input[name='site-mode']"));
 
 let activeTab = null;
 let activeOrigin = null;
+
+function message(name, substitutions) {
+  return api.i18n.getMessage(name, substitutions) || name;
+}
+
+function applyLocalization() {
+  document.documentElement.lang = api.i18n.getUILanguage?.() || "en";
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    element.textContent = message(element.dataset.i18n);
+  }
+}
 
 function originFromUrl(url) {
   try {
@@ -25,9 +38,12 @@ async function getActiveTab() {
 }
 
 async function getSettings() {
-  const result = await api.storage.local.get(["globalEnabled", "siteOverrides"]);
+  const result = await api.storage.local.get(["globalEnabled", "siteOverrides", "siteSettings"]);
+  const siteSettings = activeOrigin ? result.siteSettings?.[activeOrigin] || {} : {};
   return {
     globalEnabled: result.globalEnabled !== false,
+    invertImages: siteSettings.invertImages === true,
+    improveContrast: siteSettings.improveContrast === true,
     siteOverrides: result.siteOverrides || {}
   };
 }
@@ -48,6 +64,16 @@ async function setSiteOverride(mode) {
   await api.storage.local.set({ siteOverrides });
 }
 
+async function setSiteSetting(name, value) {
+  if (!activeOrigin) return;
+  const result = await api.storage.local.get("siteSettings");
+  const siteSettings = result.siteSettings || {};
+  const settings = { ...(siteSettings[activeOrigin] || {}), [name]: value };
+  if (!settings.invertImages && !settings.improveContrast) delete siteSettings[activeOrigin];
+  else siteSettings[activeOrigin] = settings;
+  await api.storage.local.set({ siteSettings });
+}
+
 function setStatus(text) {
   status.textContent = text;
   window.clearTimeout(setStatus.timeout);
@@ -58,7 +84,9 @@ function setStatus(text) {
 
 function setSiteControlsEnabled(enabled) {
   for (const input of siteModeInputs) input.disabled = !enabled;
-  document.querySelector("section").classList.toggle("disabled", !enabled);
+  invertImagesInput.disabled = !enabled;
+  improveContrastInput.disabled = !enabled;
+  document.querySelector(".site-panel").classList.toggle("disabled", !enabled);
 }
 
 async function render() {
@@ -67,7 +95,9 @@ async function render() {
   const settings = await getSettings();
 
   globalEnabledInput.checked = settings.globalEnabled;
-  siteLabel.textContent = activeOrigin || "Site settings are unavailable on this page.";
+  invertImagesInput.checked = settings.invertImages;
+  improveContrastInput.checked = settings.improveContrast;
+  siteLabel.textContent = activeOrigin || message("popupSiteUnavailable");
 
   const siteMode = activeOrigin ? normalizeOverride(settings.siteOverrides[activeOrigin]) : "auto";
   for (const input of siteModeInputs) input.checked = input.value === siteMode;
@@ -76,18 +106,29 @@ async function render() {
 
 globalEnabledInput.addEventListener("change", async () => {
   await api.storage.local.set({ globalEnabled: globalEnabledInput.checked });
-  setStatus(globalEnabledInput.checked ? "Enabled everywhere" : "Disabled everywhere");
+  setStatus(message(globalEnabledInput.checked ? "popupEnabledEverywhere" : "popupDisabledEverywhere"));
+});
+
+invertImagesInput.addEventListener("change", async () => {
+  await setSiteSetting("invertImages", invertImagesInput.checked);
+  setStatus(message(invertImagesInput.checked ? "popupImagesInverted" : "popupImagesRestored"));
+});
+
+improveContrastInput.addEventListener("change", async () => {
+  await setSiteSetting("improveContrast", improveContrastInput.checked);
+  setStatus(message(improveContrastInput.checked ? "popupContrastImproved" : "popupContrastNormal"));
 });
 
 for (const input of siteModeInputs) {
   input.addEventListener("change", async () => {
     if (!input.checked || !activeOrigin) return;
     await setSiteOverride(input.value);
-    setStatus(input.value === "auto" ? "Site reset to automatic" : `Site set to ${input.value}`);
+    setStatus(input.value === "auto" ? message("popupSiteAutomatic") : message("popupSiteSet", input.value));
   });
 }
 
+applyLocalization();
 render().catch((error) => {
-  siteLabel.textContent = "Could not load settings.";
+  siteLabel.textContent = message("popupCouldNotLoad");
   status.textContent = error.message || String(error);
 });

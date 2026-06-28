@@ -1,0 +1,94 @@
+{
+  "extensionName": {
+    "message": "Smart Dark Mode"
+  },
+  "extensionDescription": {
+    "message": "Automatically darkens mostly-light pages and lets you persist a per-site override."
+  },
+  "popupEnabledGlobally": {
+    "message": "Enabled globally"
+  },
+  "popupEnabledGloballyDescription": {
+    "message": "Turn extension behavior on or off everywhere."
+  },
+  "popupInvertImages": {
+    "message": "Invert images"
+  },
+  "popupInvertImagesDescription": {
+    "message": "Leave media inverted with the page instead of restoring original colors."
+  },
+  "popupImproveContrast": {
+    "message": "Improve contrast"
+  },
+  "popupImproveContrastDescription": {
+    "message": "Slightly boost brightness and contrast while inverted."
+  },
+  "popupThisSite": {
+    "message": "This site"
+  },
+  "popupLoading": {
+    "message": "Loading..."
+  },
+  "popupAutomaticDark": {
+    "message": "Automatic (Dark)"
+  },
+  "popupForceInverted": {
+    "message": "Force inverted"
+  },
+  "popupForceOriginal": {
+    "message": "Force original"
+  },
+  "popupSiteUnavailable": {
+    "message": "Site settings are unavailable on this page."
+  },
+  "popupEnabledEverywhere": {
+    "message": "Enabled everywhere"
+  },
+  "popupDisabledEverywhere": {
+    "message": "Disabled everywhere"
+  },
+  "popupImagesInverted": {
+    "message": "Images will invert with pages"
+  },
+  "popupImagesRestored": {
+    "message": "Images will keep original colors"
+  },
+  "popupContrastImproved": {
+    "message": "Contrast boost enabled"
+  },
+  "popupContrastNormal": {
+    "message": "Contrast boost disabled"
+  },
+  "popupSiteAutomatic": {
+    "message": "Site reset to automatic"
+  },
+  "popupSiteSet": {
+    "message": "Site set to $MODE$",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupCouldNotLoad": {
+    "message": "Could not load settings."
+  },
+  "contextResetSite": {
+    "message": "Reset site to Automatic (Dark)"
+  },
+  "actionAutomatic": {
+    "message": "Smart Dark Mode: automatic"
+  },
+  "actionDisabled": {
+    "message": "Smart Dark Mode: globally disabled"
+  },
+  "actionForcedInverted": {
+    "message": "Smart Dark Mode: forced inverted for this site"
+  },
+  "actionForcedOriginal": {
+    "message": "Smart Dark Mode: forced original for this site"
+  },
+  "actionAutomaticInverted": {
+    "message": "Smart Dark Mode: automatic, inverted this page"
+  }
+}

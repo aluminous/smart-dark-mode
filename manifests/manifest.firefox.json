@@ -1,42 +1,58 @@
 {
   "manifest_version": 3,
-  "name": "Smart Dark Mode",
-  "version": "0.1.0",
-  "description": "Automatically darkens mostly-light pages and lets you persist a per-site override.",
+  "name": "__MSG_extensionName__",
+  "version": "0.1.1",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "browser_specific_settings": {
     "gecko": {
       "id": "smart-dark-mode@alumino.us",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     }
   },
-  "permissions": ["storage", "activeTab", "contextMenus"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
-    "scripts": ["src/background.js"]
+    "scripts": [
+      "src/background.js"
+    ]
   },
   "action": {
-    "default_title": "Smart Dark Mode",
+    "default_title": "__MSG_extensionName__",
     "default_popup": "src/popup.html",
     "default_icon": {
-      "16": "icons/icon-16.svg",
-      "32": "icons/icon-32.svg",
-      "48": "icons/icon-48.svg",
-      "128": "icons/icon-128.svg"
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
   },
   "icons": {
-    "16": "icons/icon-16.svg",
-    "32": "icons/icon-32.svg",
-    "48": "icons/icon-48.svg",
-    "128": "icons/icon-128.svg"
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/color.js", "src/content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/color.js",
+        "src/content.js"
+      ],
       "run_at": "document_start"
     }
   ]

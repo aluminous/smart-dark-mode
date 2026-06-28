@@ -1,14 +1,14 @@
 {
   "name": "smart-dark-mode-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "validate": "node --check src/color.js && node --check src/content.js && node --check src/background.js && node --check src/popup.js && node --check scripts/prepare-build.mjs && python3 -m json.tool manifest.json >/dev/null && python3 -m json.tool manifests/manifest.firefox.json >/dev/null && python3 -m json.tool manifests/manifest.chrome.json >/dev/null",
-    "stage:firefox": "npm run validate && node scripts/prepare-build.mjs firefox",
-    "stage:chrome": "npm run validate && node scripts/prepare-build.mjs chrome",
-    "stage": "npm run validate && node scripts/prepare-build.mjs",
+    "validate": "node --check src/color.js && node --check src/content.js && node --check src/background.js && node --check src/popup.js && node --check scripts/prepare-build.mjs && node --check scripts/generate-icons.mjs && python3 -m json.tool manifest.json >/dev/null && python3 -m json.tool manifests/manifest.firefox.json >/dev/null && python3 -m json.tool manifests/manifest.chrome.json >/dev/null",
+    "stage:firefox": "npm run icons && npm run validate && node scripts/prepare-build.mjs firefox",
+    "stage:chrome": "npm run icons && npm run validate && node scripts/prepare-build.mjs chrome",
+    "stage": "npm run icons && npm run validate && node scripts/prepare-build.mjs",
     "build:firefox": "npm run stage:firefox && web-ext build --source-dir build/firefox --artifacts-dir dist/firefox --overwrite-dest",
     "build:chrome": "npm run stage:chrome && web-ext build --source-dir build/chrome --artifacts-dir dist/chrome --overwrite-dest",
     "build": "npm run build:firefox && npm run build:chrome",
@@ -16,12 +16,13 @@
     "package:chrome": "npm run build:chrome",
     "package": "npm run build",
     "lint:firefox": "npm run stage:firefox && web-ext lint --source-dir build/firefox",
-    "lint:chrome": "npm run stage:chrome && web-ext lint --source-dir build/chrome",
     "run:firefox": "npm run stage:firefox && web-ext run --source-dir build/firefox",
     "run:chrome": "npm run stage:chrome && web-ext run --source-dir build/chrome --target chromium",
-    "clean": "rm -rf build dist"
+    "clean": "rm -rf build dist",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
-    "web-ext": "^10.4.0"
+    "web-ext": "^10.4.0",
+    "sharp": "^0.35.2"
   }
 }
