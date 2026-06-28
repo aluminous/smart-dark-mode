@@ -126,7 +126,7 @@
     style.id = STYLE_ID;
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
-        background: #111 !important;
+        background: #eee !important;
         color-scheme: dark !important;
         filter: invert(1) hue-rotate(180deg) !important;
       }
