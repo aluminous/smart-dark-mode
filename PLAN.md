@@ -1,4 +1,4 @@
-# Plan: Firefox Auto Dark Mode Extension
+# Plan: Firefox Smart Dark Mode Extension
 
 ## Background
 

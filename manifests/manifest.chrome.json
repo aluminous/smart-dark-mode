@@ -3,16 +3,10 @@
   "name": "Smart Dark Mode",
   "version": "0.1.0",
   "description": "Automatically darkens mostly-light pages and lets you persist a per-site override.",
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "smart-dark-mode@alumino.us",
-      "strict_min_version": "109.0"
-    }
-  },
   "permissions": ["storage", "activeTab", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "scripts": ["src/background.js"]
+    "service_worker": "src/background.js"
   },
   "action": {
     "default_title": "Smart Dark Mode",

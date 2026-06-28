@@ -32,6 +32,13 @@ async function getSettings() {
   };
 }
 
+function normalizeOverride(override) {
+  if (override === "dark") return "inverted";
+  if (override === "light") return "original";
+  if (override === "inverted" || override === "original" || override === "auto") return override;
+  return "auto";
+}
+
 async function setSiteOverride(mode) {
   if (!activeOrigin) return;
   const result = await api.storage.local.get("siteOverrides");
@@ -39,27 +46,6 @@ async function setSiteOverride(mode) {
   if (mode === "auto") delete siteOverrides[activeOrigin];
   else siteOverrides[activeOrigin] = mode;
   await api.storage.local.set({ siteOverrides });
-}
-
-async function reevaluateTabs(tabs) {
-  await Promise.all(tabs.map(async (tab) => {
-    if (!tab.id || !originFromUrl(tab.url)) return;
-    try {
-      await api.tabs.sendMessage(tab.id, { type: "autoDarkMode:reevaluate" });
-    } catch (_error) {
-      // Restricted pages or tabs without the content script can be ignored.
-    }
-  }));
-}
-
-async function reevaluateActiveTab() {
-  if (!activeTab?.id) return;
-  await reevaluateTabs([activeTab]);
-}
-
-async function reevaluateAllTabs() {
-  const tabs = await api.tabs.query({});
-  await reevaluateTabs(tabs);
 }
 
 function setStatus(text) {
@@ -83,14 +69,13 @@ async function render() {
   globalEnabledInput.checked = settings.globalEnabled;
   siteLabel.textContent = activeOrigin || "Site settings are unavailable on this page.";
 
-  const siteMode = activeOrigin ? settings.siteOverrides[activeOrigin] || "auto" : "auto";
+  const siteMode = activeOrigin ? normalizeOverride(settings.siteOverrides[activeOrigin]) : "auto";
   for (const input of siteModeInputs) input.checked = input.value === siteMode;
   setSiteControlsEnabled(Boolean(activeOrigin));
 }
 
 globalEnabledInput.addEventListener("change", async () => {
   await api.storage.local.set({ globalEnabled: globalEnabledInput.checked });
-  await reevaluateAllTabs();
   setStatus(globalEnabledInput.checked ? "Enabled everywhere" : "Disabled everywhere");
 });
 
@@ -98,7 +83,6 @@ for (const input of siteModeInputs) {
   input.addEventListener("change", async () => {
     if (!input.checked || !activeOrigin) return;
     await setSiteOverride(input.value);
-    await reevaluateActiveTab();
     setStatus(input.value === "auto" ? "Site reset to automatic" : `Site set to ${input.value}`);
   });
 }

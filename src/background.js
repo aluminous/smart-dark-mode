@@ -1,7 +1,7 @@
 "use strict";
 
 const api = typeof browser !== "undefined" ? browser : chrome;
-const RESET_MENU_ID = "auto-dark-mode-reset-site";
+const RESET_MENU_ID = "smart-dark-mode-reset-site";
 const tabStates = new Map();
 
 function originFromUrl(url) {
@@ -19,10 +19,17 @@ async function getOverrides() {
   return result.siteOverrides || {};
 }
 
+function normalizeOverride(override) {
+  if (override === "dark") return "inverted";
+  if (override === "light") return "original";
+  if (override === "inverted" || override === "original" || override === "auto") return override;
+  return "auto";
+}
+
 async function getOverride(origin) {
   if (!origin) return "auto";
   const overrides = await getOverrides();
-  return overrides[origin] || "auto";
+  return normalizeOverride(overrides[origin]);
 }
 
 async function getGlobalEnabled() {
@@ -53,23 +60,23 @@ async function updateAction(tabId, origin, state = {}) {
   const automaticWouldDarken = Boolean(state.automaticWouldDarken);
 
   let badge = "A";
-  let title = "Auto Dark Mode: automatic";
+  let title = "Smart Dark Mode: automatic";
   let color = "#666666";
 
   if (!globalEnabled) {
     badge = "OFF";
-    title = "Auto Dark Mode: globally disabled";
+    title = "Smart Dark Mode: globally disabled";
     color = "#8f2f2f";
-  } else if (override === "dark") {
-    badge = "D";
-    title = "Auto Dark Mode: forced dark for this site";
+  } else if (override === "inverted") {
+    badge = "I";
+    title = "Smart Dark Mode: forced inverted for this site";
     color = "#111111";
-  } else if (override === "light") {
-    badge = "L";
-    title = "Auto Dark Mode: forced light for this site";
+  } else if (override === "original") {
+    badge = "O";
+    title = "Smart Dark Mode: forced original for this site";
     color = "#d8d8d8";
   } else if (active || automaticWouldDarken) {
-    title = "Auto Dark Mode: automatic, darkened this page";
+    title = "Smart Dark Mode: automatic, inverted this page";
     color = "#234f8f";
   }
 
@@ -85,7 +92,7 @@ async function reevaluateTab(tabId) {
 api.runtime.onInstalled.addListener(() => {
   api.contextMenus.create({
     id: RESET_MENU_ID,
-    title: "Reset site to automatic dark detection",
+    title: "Reset site to Automatic (Dark)",
     contexts: ["action"]
   });
 });
@@ -97,7 +104,7 @@ api.runtime.onMessage.addListener((message, sender) => {
     origin: message.origin,
     active: Boolean(message.active),
     automaticWouldDarken: Boolean(message.automaticWouldDarken),
-    override: message.override || "auto",
+    override: normalizeOverride(message.override),
     globalEnabled: message.globalEnabled !== false
   });
   updateAction(tabId, message.origin, tabStates.get(tabId));
@@ -113,6 +120,19 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
   tabStates.set(tab.id, { ...state, origin, override: "auto" });
   await updateAction(tab.id, origin, tabStates.get(tab.id));
   await reevaluateTab(tab.id);
+});
+
+api.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local" || (!changes.globalEnabled && !changes.siteOverrides)) return;
+  for (const [tabId, state] of tabStates) {
+    const nextState = { ...state };
+    if (changes.globalEnabled) nextState.globalEnabled = changes.globalEnabled.newValue !== false;
+    if (changes.siteOverrides && state.origin) {
+      nextState.override = normalizeOverride(changes.siteOverrides.newValue?.[state.origin]);
+    }
+    tabStates.set(tabId, nextState);
+    updateAction(tabId, state.origin, nextState);
+  }
 });
 
 api.tabs.onActivated.addListener(async ({ tabId }) => {

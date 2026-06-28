@@ -12,11 +12,9 @@
     "img",
     "video",
     "canvas",
-    "picture",
     "iframe",
     "object",
     "embed",
-    "svg",
     "[role='img']",
     "[data-auto-dark-mode-exempt]"
   ].join(", ");
@@ -25,11 +23,18 @@
   let currentOverride = "auto";
   let globalEnabled = true;
   let automaticWouldDarken = false;
-  let preapplied = false;
+  let evaluationStarted = false;
 
   function originKey() {
     if (!/^https?:$/i.test(location.protocol)) return null;
     return location.origin;
+  }
+
+  function normalizeOverride(override) {
+    if (override === "dark") return "inverted";
+    if (override === "light") return "original";
+    if (override === "inverted" || override === "original" || override === "auto") return override;
+    return "auto";
   }
 
   async function getSiteState() {
@@ -39,7 +44,7 @@
     if (!key) return { globalEnabled: enabled, override: "auto", lastActive: false };
     return {
       globalEnabled: enabled,
-      override: result.siteOverrides?.[key] || "auto",
+      override: normalizeOverride(result.siteOverrides?.[key]),
       lastActive: Boolean(result.siteLastStates?.[key]?.active)
     };
   }
@@ -117,10 +122,6 @@
         filter: invert(1) hue-rotate(180deg) !important;
       }
 
-      html[${ROOT_ATTR}="active"] body {
-        background: #fff !important;
-      }
-
       html[${ROOT_ATTR}="active"] ${EXCEPTION_SELECTOR} {
         filter: invert(1) hue-rotate(180deg) !important;
       }
@@ -135,20 +136,25 @@
     document.documentElement.setAttribute(ROOT_ATTR, "active");
   }
 
+  function removeGlobalStyle() {
+    document.getElementById(STYLE_ID)?.remove();
+  }
+
   async function preapplyFromStoredState() {
     if (!document.documentElement) return;
     const state = await getSiteState();
+    if (evaluationStarted) return;
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
-    const shouldPreapply = globalEnabled && (state.override === "dark" || (state.override === "auto" && state.lastActive));
-    if (!shouldPreapply || state.override === "light") return;
-    preapplied = true;
+    const shouldPreapply = globalEnabled && (state.override === "inverted" || (state.override === "auto" && state.lastActive));
+    if (!shouldPreapply || state.override === "original") return;
     applyDarkMode();
   }
 
   function removeDarkMode() {
     active = false;
     document.documentElement.removeAttribute(ROOT_ATTR);
+    removeGlobalStyle();
   }
 
   async function reportState() {
@@ -167,22 +173,21 @@
   }
 
   async function evaluate() {
+    evaluationStarted = true;
     const state = await getSiteState();
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
     const wasActive = active;
     if (!globalEnabled) {
       automaticWouldDarken = false;
-      if (wasActive) removeDarkMode();
-      preapplied = false;
+      removeDarkMode();
       await reportState();
       return;
     }
     automaticWouldDarken = detectMostlyLight();
-    const shouldDarken = currentOverride === "dark" || (currentOverride === "auto" && automaticWouldDarken);
+    const shouldDarken = currentOverride === "inverted" || (currentOverride === "auto" && automaticWouldDarken);
     if (shouldDarken) applyDarkMode();
-    else if (wasActive) removeDarkMode();
-    preapplied = false;
+    else removeDarkMode();
     await rememberSiteState();
     await reportState();
   }
@@ -191,6 +196,15 @@
     if (!message || message.type !== "autoDarkMode:reevaluate") return undefined;
     evaluate();
     return undefined;
+  });
+
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local") return;
+    const key = originKey();
+    const globalChanged = Boolean(changes.globalEnabled);
+    const siteOverrideChanged = key && Boolean(changes.siteOverrides) &&
+      changes.siteOverrides.oldValue?.[key] !== changes.siteOverrides.newValue?.[key];
+    if (globalChanged || siteOverrideChanged) evaluate();
   });
 
   preapplyFromStoredState();
