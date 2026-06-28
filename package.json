@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "validate": "node --check src/color.js && node --check src/content.js && node --check src/background.js && node --check src/popup.js && node --check scripts/prepare-build.mjs && node --check scripts/generate-icons.mjs && python3 -m json.tool manifest.json >/dev/null && python3 -m json.tool manifests/manifest.firefox.json >/dev/null && python3 -m json.tool manifests/manifest.chrome.json >/dev/null",
+    "validate": "node --check src/color.js && node --check src/content.js && node --check src/background.js && node --check src/popup.js && node --check scripts/prepare-build.mjs && node --check scripts/generate-icons.mjs && node --check scripts/publish-stores.mjs && python3 -m json.tool manifest.json >/dev/null && python3 -m json.tool manifests/manifest.firefox.json >/dev/null && python3 -m json.tool manifests/manifest.chrome.json >/dev/null",
     "stage:firefox": "npm run icons && npm run validate && node scripts/prepare-build.mjs firefox",
     "stage:chrome": "npm run icons && npm run validate && node scripts/prepare-build.mjs chrome",
     "stage": "npm run icons && npm run validate && node scripts/prepare-build.mjs",
@@ -19,7 +19,8 @@
     "run:firefox": "npm run stage:firefox && web-ext run --source-dir build/firefox",
     "run:chrome": "npm run stage:chrome && web-ext run --source-dir build/chrome --target chromium",
     "clean": "rm -rf build dist",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "publish:stores": "node scripts/publish-stores.mjs"
   },
   "devDependencies": {
     "web-ext": "^10.4.0",

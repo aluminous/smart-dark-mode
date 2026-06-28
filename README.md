@@ -88,6 +88,18 @@ npm run package:chrome
 
 `web-ext` can build either manifest variant. Firefox packages are written under `dist/firefox/`; Chrome/Chromium packages are written under `dist/chrome/`.
 
+## CI/CD
+
+GitHub Actions workflows live in `.github/workflows/`:
+
+- `ci.yml` runs validation, Firefox linting, and both browser builds on pushes and pull requests.
+- `release.yml` is manually triggered. It builds both packages, creates a GitHub release with notes generated from git commits, and attempts to publish to AMO and the Chrome Web Store.
+
+Store publishing is skipped with a workflow warning unless the relevant secrets are configured:
+
+- Firefox: `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`
+- Chrome: `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`
+
 ## Development validation
 
 Open pages listen for extension storage changes, so global and per-site settings apply to already-open tabs without requiring the broad `tabs` permission.
