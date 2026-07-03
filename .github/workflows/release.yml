@@ -160,7 +160,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARGS=("${{ steps.notes.outputs.tag }}" dist/firefox/*.zip dist/chrome/*.zip --target "${{ steps.version.outputs.sha }}" --title "${{ steps.notes.outputs.tag }}" --notes-file RELEASE_NOTES.md)
+          mkdir -p release-assets
+          cp dist/firefox/*.zip "release-assets/smart-dark-mode-firefox-${{ steps.version.outputs.version }}.zip"
+          cp dist/chrome/*.zip "release-assets/smart-dark-mode-chrome-${{ steps.version.outputs.version }}.zip"
+
+          ARGS=("${{ steps.notes.outputs.tag }}" release-assets/*.zip --target "${{ steps.version.outputs.sha }}" --title "${{ steps.notes.outputs.tag }}" --notes-file RELEASE_NOTES.md)
           if [[ "${{ inputs.prerelease }}" == "true" ]]; then
             ARGS+=(--prerelease)
           fi
