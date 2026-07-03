@@ -44,7 +44,8 @@ async function publishFirefox() {
     "--artifacts-dir", "dist/firefox-signed",
     "--api-key", process.env.FIREFOX_JWT_ISSUER,
     "--api-secret", process.env.FIREFOX_JWT_SECRET,
-    "--channel", "listed"
+    "--channel", "listed",
+    "--approval-timeout", "0"
   ]);
 }
 
@@ -105,5 +106,11 @@ async function publishChrome() {
   });
 }
 
-await publishFirefox();
-await publishChrome();
+const targets = process.argv.slice(2);
+const selected = targets.length ? targets : ["firefox", "chrome"];
+
+for (const target of selected) {
+  if (target === "firefox") await publishFirefox();
+  else if (target === "chrome") await publishChrome();
+  else throw new Error(`Unknown publish target: ${target}`);
+}
