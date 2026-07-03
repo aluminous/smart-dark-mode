@@ -96,6 +96,10 @@ h1 {
   margin-bottom: 10px;
 }
 
+.section-heading.compact {
+  margin-bottom: 12px;
+}
+
 .section-title {
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -138,6 +142,49 @@ h1 {
   height: 1px;
   margin: 12px 0;
   background: var(--line);
+}
+
+.slider-setting {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slider-setting strong {
+  display: block;
+  font-weight: 700;
+}
+
+.slider-setting small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#auto-threshold-value {
+  min-width: 46px;
+  padding: 3px 8px;
+  border: 1px solid rgba(138, 180, 255, 0.35);
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 700;
+  text-align: center;
+}
+
+.threshold-slider {
+  width: 100%;
+  margin: 12px 0 4px;
+  accent-color: var(--accent-strong);
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 input[type="checkbox"] {

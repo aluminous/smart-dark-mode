@@ -2,6 +2,8 @@
 
 const api = typeof browser !== "undefined" ? browser : chrome;
 const globalEnabledInput = document.getElementById("global-enabled");
+const autoThresholdInput = document.getElementById("auto-threshold");
+const autoThresholdValue = document.getElementById("auto-threshold-value");
 const invertImagesInput = document.getElementById("invert-images");
 const improveContrastInput = document.getElementById("improve-contrast");
 const siteLabel = document.getElementById("site-label");
@@ -37,11 +39,22 @@ async function getActiveTab() {
   return tabs[0] || null;
 }
 
+function normalizeThreshold(value) {
+  const threshold = Number(value);
+  if (!Number.isFinite(threshold)) return 0.55;
+  return Math.min(0.75, Math.max(0.35, threshold));
+}
+
+function updateThresholdLabel() {
+  autoThresholdValue.textContent = `${autoThresholdInput.value}%`;
+}
+
 async function getSettings() {
-  const result = await api.storage.local.get(["globalEnabled", "siteOverrides", "siteSettings"]);
+  const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "siteOverrides", "siteSettings"]);
   const siteSettings = activeOrigin ? result.siteSettings?.[activeOrigin] || {} : {};
   return {
     globalEnabled: result.globalEnabled !== false,
+    autoThreshold: normalizeThreshold(result.autoThreshold),
     invertImages: siteSettings.invertImages === true,
     improveContrast: siteSettings.improveContrast === true,
     siteOverrides: result.siteOverrides || {}
@@ -95,6 +108,8 @@ async function render() {
   const settings = await getSettings();
 
   globalEnabledInput.checked = settings.globalEnabled;
+  autoThresholdInput.value = String(Math.round(settings.autoThreshold * 100));
+  updateThresholdLabel();
   invertImagesInput.checked = settings.invertImages;
   improveContrastInput.checked = settings.improveContrast;
   siteLabel.textContent = activeOrigin || message("popupSiteUnavailable");
@@ -107,6 +122,13 @@ async function render() {
 globalEnabledInput.addEventListener("change", async () => {
   await api.storage.local.set({ globalEnabled: globalEnabledInput.checked });
   setStatus(message(globalEnabledInput.checked ? "popupEnabledEverywhere" : "popupDisabledEverywhere"));
+});
+
+autoThresholdInput.addEventListener("input", updateThresholdLabel);
+autoThresholdInput.addEventListener("change", async () => {
+  const threshold = Number(autoThresholdInput.value) / 100;
+  await api.storage.local.set({ autoThreshold: threshold });
+  setStatus(message("popupAutoThresholdSet", autoThresholdInput.value));
 });
 
 invertImagesInput.addEventListener("change", async () => {

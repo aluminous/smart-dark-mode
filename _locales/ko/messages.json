@@ -11,6 +11,32 @@
   "popupEnabledGloballyDescription": {
     "message": "모든 사이트에서 확장 기능 동작을 켜거나 끕니다."
   },
+  "popupAutoMode": {
+    "message": "자동 모드"
+  },
+  "popupAutoModeDescription": {
+    "message": "자동 모드가 페이지를 반전할 조건을 조정합니다."
+  },
+  "popupAutoThreshold": {
+    "message": "반전 기준값"
+  },
+  "popupAutoThresholdDescription": {
+    "message": "값이 높을수록 더 밝은 페이지에서만 반전합니다."
+  },
+  "popupAutoThresholdMorePages": {
+    "message": "더 많은 페이지"
+  },
+  "popupAutoThresholdFewerPages": {
+    "message": "매우 밝은 페이지만"
+  },
+  "popupAutoThresholdSet": {
+    "message": "자동 기준값을 $VALUE$로 설정했습니다",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
   "popupInvertImages": {
     "message": "이미지 반전"
   },

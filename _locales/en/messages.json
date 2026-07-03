@@ -11,6 +11,32 @@
   "popupEnabledGloballyDescription": {
     "message": "Turn extension behavior on or off everywhere."
   },
+  "popupAutoMode": {
+    "message": "Auto Mode"
+  },
+  "popupAutoModeDescription": {
+    "message": "Tune when automatic mode should invert a page."
+  },
+  "popupAutoThreshold": {
+    "message": "Inversion threshold"
+  },
+  "popupAutoThresholdDescription": {
+    "message": "Higher values only invert brighter pages."
+  },
+  "popupAutoThresholdMorePages": {
+    "message": "More pages"
+  },
+  "popupAutoThresholdFewerPages": {
+    "message": "Only very light"
+  },
+  "popupAutoThresholdSet": {
+    "message": "Auto threshold set to $VALUE$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
   "popupInvertImages": {
     "message": "Invert images"
   },

@@ -21,6 +21,28 @@
     </label>
   </section>
 
+  <section class="panel auto-panel" aria-labelledby="auto-title">
+    <div class="section-heading compact">
+      <div>
+        <div id="auto-title" class="section-title" data-i18n="popupAutoMode">Auto Mode</div>
+        <div class="site" data-i18n="popupAutoModeDescription">Tune when automatic mode should invert a page.</div>
+      </div>
+    </div>
+
+    <label class="slider-setting" for="auto-threshold">
+      <span>
+        <strong data-i18n="popupAutoThreshold">Inversion threshold</strong>
+        <small data-i18n="popupAutoThresholdDescription">Higher values only invert brighter pages.</small>
+      </span>
+      <output id="auto-threshold-value" for="auto-threshold">55%</output>
+    </label>
+    <input id="auto-threshold" class="threshold-slider" type="range" min="35" max="75" step="1">
+    <div class="slider-labels" aria-hidden="true">
+      <span data-i18n="popupAutoThresholdMorePages">More pages</span>
+      <span data-i18n="popupAutoThresholdFewerPages">Only very light</span>
+    </div>
+  </section>
+
   <section class="panel site-panel" aria-labelledby="site-title">
     <div class="section-heading">
       <div>

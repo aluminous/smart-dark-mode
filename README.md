@@ -35,7 +35,8 @@ npm run run:firefox
 - Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
-- The popup keeps the global enable/disable control separate from current-site controls.
+- The popup keeps the global enable/disable control separate from Auto Mode and current-site controls.
+- Auto Mode includes a threshold slider for choosing how bright a page must be before automatic inversion applies.
 - Per-site controls choose whether images/media are restored to original colors or inverted with the page.
 - Per-site controls can enable a slight brightness/contrast boost while pages are inverted.
 - Per-site controls can set the current site to Automatic (Dark), Force inverted, or Force original.

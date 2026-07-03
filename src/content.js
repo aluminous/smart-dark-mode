@@ -7,7 +7,7 @@
   const ROOT_ATTR = "data-auto-dark-mode";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
   const CONTRAST_ATTR = "data-auto-dark-mode-contrast";
-  const LIGHT_THRESHOLD = 0.55;
+  const DEFAULT_LIGHT_THRESHOLD = 0.55;
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
   const EXCEPTION_SELECTOR = [
@@ -26,6 +26,7 @@
   let globalEnabled = true;
   let invertImages = false;
   let improveContrast = false;
+  let lightThreshold = DEFAULT_LIGHT_THRESHOLD;
   let automaticWouldDarken = false;
   let evaluationStarted = false;
 
@@ -41,12 +42,19 @@
     return "auto";
   }
 
+  function normalizeThreshold(value) {
+    const threshold = Number(value);
+    if (!Number.isFinite(threshold)) return DEFAULT_LIGHT_THRESHOLD;
+    return Math.min(0.9, Math.max(0.1, threshold));
+  }
+
   async function getSiteState() {
     const key = originKey();
-    const result = await api.storage.local.get(["globalEnabled", "siteOverrides", "siteLastStates", "siteSettings"]);
+    const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "siteOverrides", "siteLastStates", "siteSettings"]);
     const siteSettings = key ? result.siteSettings?.[key] || {} : {};
     const sharedState = {
       globalEnabled: result.globalEnabled !== false,
+      lightThreshold: normalizeThreshold(result.autoThreshold),
       invertImages: siteSettings.invertImages === true,
       improveContrast: siteSettings.improveContrast === true
     };
@@ -115,9 +123,9 @@
 
     if (!count) {
       const bodyBg = effectiveBackground(document.body || document.documentElement);
-      return Color.luminance(bodyBg) >= LIGHT_THRESHOLD;
+      return Color.luminance(bodyBg) >= lightThreshold;
     }
-    return total / count >= LIGHT_THRESHOLD;
+    return total / count >= lightThreshold;
   }
 
   function ensureGlobalStyle() {
@@ -168,6 +176,7 @@
     if (evaluationStarted) return;
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
+    lightThreshold = state.lightThreshold;
     invertImages = state.invertImages;
     improveContrast = state.improveContrast;
     const shouldPreapply = globalEnabled && (state.override === "inverted" || (state.override === "auto" && state.lastActive));
@@ -192,6 +201,7 @@
         automaticWouldDarken,
         override: currentOverride,
         globalEnabled,
+        lightThreshold,
         invertImages,
         improveContrast
       });
@@ -205,6 +215,7 @@
     const state = await getSiteState();
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
+    lightThreshold = state.lightThreshold;
     invertImages = state.invertImages;
     improveContrast = state.improveContrast;
     if (!globalEnabled) {
@@ -230,7 +241,7 @@
   api.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== "local") return;
     const key = originKey();
-    const globalChanged = Boolean(changes.globalEnabled);
+    const globalChanged = Boolean(changes.globalEnabled || changes.autoThreshold);
     const visualSettingChanged = key && Boolean(changes.siteSettings) &&
       JSON.stringify(changes.siteSettings.oldValue?.[key] || {}) !== JSON.stringify(changes.siteSettings.newValue?.[key] || {});
     const siteOverrideChanged = key && Boolean(changes.siteOverrides) &&
