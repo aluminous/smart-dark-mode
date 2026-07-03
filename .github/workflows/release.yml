@@ -36,6 +36,96 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          export INPUT_TAG="${{ inputs.tag }}"
+
+          node <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync, writeFileSync } from "node:fs";
+
+          const inputTag = process.env.INPUT_TAG?.trim();
+          const outputPath = process.env.GITHUB_OUTPUT;
+
+          function writeValues(values) {
+            const lines = Object.entries(values).map(([key, value]) => `${key}=${value}\n`).join("");
+            writeFileSync(outputPath, lines, { flag: "a" });
+            writeFileSync(".release-version.env", lines.replace(/^tag=/m, "TAG=").replace(/^version=/m, "VERSION=").replace(/^bumped=/m, "BUMPED="));
+          }
+
+          function tagExists(tag) {
+            try {
+              execFileSync("git", ["rev-parse", "--verify", `refs/tags/${tag}`], { stdio: "ignore" });
+              return true;
+            } catch {
+              return false;
+            }
+          }
+
+          function readJson(path) {
+            return JSON.parse(readFileSync(path, "utf8"));
+          }
+
+          function writeJson(path, value) {
+            writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+          }
+
+          if (inputTag) {
+            writeValues({ tag: inputTag, version: inputTag.replace(/^v/, ""), bumped: "false" });
+            process.exit(0);
+          }
+
+          const packageJson = readJson("package.json");
+          const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(packageJson.version);
+          if (!match) throw new Error(`Unsupported package.json version: ${packageJson.version}`);
+
+          const major = Number(match[1]);
+          const minor = Number(match[2]);
+          let patch = Number(match[3]);
+          let version = `${major}.${minor}.${patch}`;
+          let tag = `v${version}`;
+          let bumped = false;
+
+          while (tagExists(tag)) {
+            patch += 1;
+            version = `${major}.${minor}.${patch}`;
+            tag = `v${version}`;
+            bumped = true;
+          }
+
+          if (bumped) {
+            packageJson.version = version;
+            writeJson("package.json", packageJson);
+
+            const packageLock = readJson("package-lock.json");
+            packageLock.version = version;
+            if (packageLock.packages?.[""]) packageLock.packages[""].version = version;
+            writeJson("package-lock.json", packageLock);
+
+            for (const path of ["manifest.json", "manifests/manifest.firefox.json", "manifests/manifest.chrome.json"]) {
+              const manifest = readJson(path);
+              manifest.version = version;
+              writeJson(path, manifest);
+            }
+          }
+
+          writeValues({ tag, version, bumped: bumped ? "true" : "false" });
+          NODE
+
+          source .release-version.env
+          if [[ "$BUMPED" == "true" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package.json package-lock.json manifest.json manifests/manifest.firefox.json manifests/manifest.chrome.json
+            git commit -m "Bump version to $TAG"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
+
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Build packages
         run: npm run build
 
@@ -44,11 +134,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG="${{ inputs.tag }}"
-          if [[ -z "$TAG" ]]; then
-            VERSION="$(node -p "require('./package.json').version")"
-            TAG="v${VERSION}"
-          fi
+          TAG="${{ steps.version.outputs.tag }}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
           PREVIOUS_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
@@ -74,7 +160,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARGS=("${{ steps.notes.outputs.tag }}" dist/firefox/*.zip dist/chrome/*.zip --target "$GITHUB_SHA" --title "${{ steps.notes.outputs.tag }}" --notes-file RELEASE_NOTES.md)
+          ARGS=("${{ steps.notes.outputs.tag }}" dist/firefox/*.zip dist/chrome/*.zip --target "${{ steps.version.outputs.sha }}" --title "${{ steps.notes.outputs.tag }}" --notes-file RELEASE_NOTES.md)
           if [[ "${{ inputs.prerelease }}" == "true" ]]; then
             ARGS+=(--prerelease)
           fi
