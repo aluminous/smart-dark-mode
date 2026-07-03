@@ -33,10 +33,16 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Upload extension packages
+      - name: Upload Firefox package
         uses: actions/upload-artifact@v4
         with:
-          name: extension-packages
-          path: |
-            dist/firefox/*.zip
-            dist/chrome/*.zip
+          name: firefox-package
+          path: dist/firefox/*.zip
+          if-no-files-found: error
+
+      - name: Upload Chrome package
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-package
+          path: dist/chrome/*.zip
+          if-no-files-found: error
