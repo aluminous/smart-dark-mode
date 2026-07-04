@@ -118,7 +118,9 @@ api.runtime.onMessage.addListener((message, sender) => {
     globalEnabled: message.globalEnabled !== false,
     autoDirection: normalizeDirection(message.autoDirection),
     invertImages: message.invertImages === true,
-    improveContrast: message.improveContrast === true
+    customCorrection: message.customCorrection === true,
+    customBrightness: Number(message.customBrightness),
+    customContrast: Number(message.customContrast)
   });
   updateAction(tabId, message.origin, tabStates.get(tabId));
   return undefined;
@@ -144,7 +146,9 @@ api.storage.onChanged.addListener((changes, areaName) => {
     if (changes.siteSettings && state.origin) {
       const siteSettings = changes.siteSettings.newValue?.[state.origin] || {};
       nextState.invertImages = siteSettings.invertImages === true;
-      nextState.improveContrast = siteSettings.improveContrast === true;
+      nextState.customCorrection = siteSettings.customCorrection === true || siteSettings.improveContrast === true;
+      nextState.customBrightness = Number(siteSettings.customBrightness);
+      nextState.customContrast = Number(siteSettings.customContrast);
     }
     if (changes.siteOverrides && state.origin) {
       nextState.override = normalizeOverride(changes.siteOverrides.newValue?.[state.origin]);

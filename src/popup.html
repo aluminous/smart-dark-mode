@@ -99,11 +99,29 @@
 
     <label class="setting-row">
       <span>
-        <strong data-i18n="popupImproveContrast">Improve contrast</strong>
-        <small data-i18n="popupImproveContrastDescription">Slightly boost brightness and contrast while inverted.</small>
+        <strong data-i18n="popupCustomCorrection">Custom brightness and contrast</strong>
+        <small data-i18n="popupCustomCorrectionDescription">Tune brightness and contrast while pages are inverted.</small>
       </span>
-      <input id="improve-contrast" type="checkbox">
+      <input id="custom-correction" type="checkbox">
     </label>
+
+    <div id="custom-correction-controls" class="correction-controls" hidden>
+      <label class="slider-setting" for="custom-brightness">
+        <span>
+          <strong data-i18n="popupBrightness">Brightness</strong>
+        </span>
+        <output id="custom-brightness-value" for="custom-brightness">106%</output>
+      </label>
+      <input id="custom-brightness" class="threshold-slider" type="range" min="80" max="140" step="1">
+
+      <label class="slider-setting correction-slider-setting" for="custom-contrast">
+        <span>
+          <strong data-i18n="popupContrast">Contrast</strong>
+        </span>
+        <output id="custom-contrast-value" for="custom-contrast">108%</output>
+      </label>
+      <input id="custom-contrast" class="threshold-slider" type="range" min="80" max="140" step="1">
+    </div>
   </section>
 
   <div id="status" class="status"></div>

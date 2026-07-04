@@ -10,13 +10,22 @@ const autoThresholdLeftLabel = document.getElementById("auto-threshold-left-labe
 const autoThresholdRightLabel = document.getElementById("auto-threshold-right-label");
 const autoDirectionInputs = Array.from(document.querySelectorAll("input[name='auto-direction']"));
 const invertImagesInput = document.getElementById("invert-images");
-const improveContrastInput = document.getElementById("improve-contrast");
+const customCorrectionInput = document.getElementById("custom-correction");
+const customCorrectionControls = document.getElementById("custom-correction-controls");
+const customBrightnessInput = document.getElementById("custom-brightness");
+const customBrightnessValue = document.getElementById("custom-brightness-value");
+const customContrastInput = document.getElementById("custom-contrast");
+const customContrastValue = document.getElementById("custom-contrast-value");
 const siteLabel = document.getElementById("site-label");
 const status = document.getElementById("status");
 const siteModeInputs = Array.from(document.querySelectorAll("input[name='site-mode']"));
 
 autoThresholdInput.min = String(Math.round(Config.THRESHOLD_MIN * 100));
 autoThresholdInput.max = String(Math.round(Config.THRESHOLD_MAX * 100));
+customBrightnessInput.min = String(Math.round(Config.CORRECTION_MIN * 100));
+customBrightnessInput.max = String(Math.round(Config.CORRECTION_MAX * 100));
+customContrastInput.min = String(Math.round(Config.CORRECTION_MIN * 100));
+customContrastInput.max = String(Math.round(Config.CORRECTION_MAX * 100));
 
 let activeTab = null;
 let activeOrigin = null;
@@ -63,6 +72,17 @@ function renderThresholdLabels(direction) {
   }
 }
 
+function updateCorrectionLabels() {
+  customBrightnessValue.textContent = `${customBrightnessInput.value}%`;
+  customContrastValue.textContent = `${customContrastInput.value}%`;
+}
+
+function renderCorrectionControls(enabled) {
+  customCorrectionControls.hidden = !enabled;
+  customBrightnessInput.disabled = !enabled;
+  customContrastInput.disabled = !enabled;
+}
+
 async function getSettings() {
   const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "autoDirection", "siteOverrides", "siteSettings"]);
   const siteSettings = activeOrigin ? result.siteSettings?.[activeOrigin] || {} : {};
@@ -71,7 +91,9 @@ async function getSettings() {
     autoThreshold: Config.normalizeThreshold(result.autoThreshold),
     autoDirection: Config.normalizeDirection(result.autoDirection),
     invertImages: siteSettings.invertImages === true,
-    improveContrast: siteSettings.improveContrast === true,
+    customCorrection: siteSettings.customCorrection === true || siteSettings.improveContrast === true,
+    customBrightness: Config.normalizeBrightness(siteSettings.customBrightness),
+    customContrast: Config.normalizeContrast(siteSettings.customContrast),
     siteOverrides: result.siteOverrides || {}
   };
 }
@@ -92,12 +114,27 @@ async function setSiteOverride(mode) {
   await api.storage.local.set({ siteOverrides });
 }
 
-async function setSiteSetting(name, value) {
+function normalizeSiteSettings(settings) {
+  const next = { ...settings };
+  delete next.improveContrast;
+  next.invertImages = next.invertImages === true;
+  next.customCorrection = next.customCorrection === true;
+  if (next.customCorrection) {
+    next.customBrightness = Config.normalizeBrightness(next.customBrightness);
+    next.customContrast = Config.normalizeContrast(next.customContrast);
+  } else {
+    delete next.customBrightness;
+    delete next.customContrast;
+  }
+  return next;
+}
+
+async function updateSiteSettings(updates) {
   if (!activeOrigin) return;
   const result = await api.storage.local.get("siteSettings");
   const siteSettings = result.siteSettings || {};
-  const settings = { ...(siteSettings[activeOrigin] || {}), [name]: value };
-  if (!settings.invertImages && !settings.improveContrast) delete siteSettings[activeOrigin];
+  const settings = normalizeSiteSettings({ ...(siteSettings[activeOrigin] || {}), ...updates });
+  if (!settings.invertImages && !settings.customCorrection) delete siteSettings[activeOrigin];
   else siteSettings[activeOrigin] = settings;
   await api.storage.local.set({ siteSettings });
 }
@@ -113,7 +150,9 @@ function setStatus(text) {
 function setSiteControlsEnabled(enabled) {
   for (const input of siteModeInputs) input.disabled = !enabled;
   invertImagesInput.disabled = !enabled;
-  improveContrastInput.disabled = !enabled;
+  customCorrectionInput.disabled = !enabled;
+  customBrightnessInput.disabled = !enabled || !customCorrectionInput.checked;
+  customContrastInput.disabled = !enabled || !customCorrectionInput.checked;
   document.querySelector(".site-panel").classList.toggle("disabled", !enabled);
 }
 
@@ -128,7 +167,11 @@ async function render() {
   renderThresholdLabels(settings.autoDirection);
   for (const input of autoDirectionInputs) input.checked = input.value === settings.autoDirection;
   invertImagesInput.checked = settings.invertImages;
-  improveContrastInput.checked = settings.improveContrast;
+  customCorrectionInput.checked = settings.customCorrection;
+  customBrightnessInput.value = String(Math.round(settings.customBrightness * 100));
+  customContrastInput.value = String(Math.round(settings.customContrast * 100));
+  updateCorrectionLabels();
+  renderCorrectionControls(settings.customCorrection);
   siteLabel.textContent = activeOrigin || message("popupSiteUnavailable");
 
   const siteMode = activeOrigin ? normalizeOverride(settings.siteOverrides[activeOrigin]) : "auto";
@@ -158,13 +201,31 @@ for (const input of autoDirectionInputs) {
 }
 
 invertImagesInput.addEventListener("change", async () => {
-  await setSiteSetting("invertImages", invertImagesInput.checked);
+  await updateSiteSettings({ invertImages: invertImagesInput.checked });
   setStatus(message(invertImagesInput.checked ? "popupImagesInverted" : "popupImagesRestored"));
 });
 
-improveContrastInput.addEventListener("change", async () => {
-  await setSiteSetting("improveContrast", improveContrastInput.checked);
-  setStatus(message(improveContrastInput.checked ? "popupContrastImproved" : "popupContrastNormal"));
+customCorrectionInput.addEventListener("change", async () => {
+  const enabled = customCorrectionInput.checked;
+  renderCorrectionControls(enabled);
+  await updateSiteSettings({
+    customCorrection: enabled,
+    customBrightness: Number(customBrightnessInput.value) / 100,
+    customContrast: Number(customContrastInput.value) / 100
+  });
+  setStatus(message(enabled ? "popupCustomCorrectionEnabled" : "popupCustomCorrectionDisabled"));
+});
+
+customBrightnessInput.addEventListener("input", updateCorrectionLabels);
+customBrightnessInput.addEventListener("change", async () => {
+  await updateSiteSettings({ customBrightness: Number(customBrightnessInput.value) / 100 });
+  setStatus(message("popupBrightnessSet", customBrightnessInput.value));
+});
+
+customContrastInput.addEventListener("input", updateCorrectionLabels);
+customContrastInput.addEventListener("change", async () => {
+  await updateSiteSettings({ customContrast: Number(customContrastInput.value) / 100 });
+  setStatus(message("popupContrastSet", customContrastInput.value));
 });
 
 for (const input of siteModeInputs) {

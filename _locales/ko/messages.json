@@ -69,11 +69,17 @@
   "popupInvertImagesDescription": {
     "message": "미디어를 원래 색으로 복원하지 않고 페이지와 함께 반전합니다."
   },
-  "popupImproveContrast": {
-    "message": "대비 개선"
+  "popupCustomCorrection": {
+    "message": "사용자 지정 밝기와 대비"
   },
-  "popupImproveContrastDescription": {
-    "message": "반전된 상태에서 밝기와 대비를 약간 높입니다."
+  "popupCustomCorrectionDescription": {
+    "message": "페이지가 반전된 상태의 밝기와 대비를 조정합니다."
+  },
+  "popupBrightness": {
+    "message": "밝기"
+  },
+  "popupContrast": {
+    "message": "대비"
   },
   "popupThisSite": {
     "message": "이 사이트"
@@ -105,11 +111,27 @@
   "popupImagesRestored": {
     "message": "이미지가 원래 색을 유지합니다"
   },
-  "popupContrastImproved": {
-    "message": "대비 향상이 켜졌습니다"
+  "popupCustomCorrectionEnabled": {
+    "message": "사용자 지정 보정이 켜졌습니다"
   },
-  "popupContrastNormal": {
-    "message": "대비 향상이 꺼졌습니다"
+  "popupCustomCorrectionDisabled": {
+    "message": "사용자 지정 보정이 꺼졌습니다"
+  },
+  "popupBrightnessSet": {
+    "message": "밝기를 $VALUE$로 설정했습니다",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupContrastSet": {
+    "message": "대비를 $VALUE$로 설정했습니다",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
   },
   "popupSiteAutomatic": {
     "message": "사이트를 자동 모드로 재설정했습니다"

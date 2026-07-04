@@ -8,7 +8,11 @@
   const ROOT_ATTR = "data-auto-dark-mode";
   const DIRECTION_ATTR = "data-auto-dark-mode-direction";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
-  const CONTRAST_ATTR = "data-auto-dark-mode-contrast";
+  const CORRECTION_ATTR = "data-auto-dark-mode-correction";
+  const BRIGHTNESS_VAR = "--auto-dark-mode-brightness";
+  const CONTRAST_VAR = "--auto-dark-mode-contrast";
+  const BRIGHTNESS_INVERSE_VAR = "--auto-dark-mode-brightness-inverse";
+  const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
   const EXCEPTION_SELECTOR = [
@@ -26,7 +30,9 @@
   let currentOverride = "auto";
   let globalEnabled = true;
   let invertImages = false;
-  let improveContrast = false;
+  let customCorrection = false;
+  let customBrightness = Config.DEFAULT_BRIGHTNESS;
+  let customContrast = Config.DEFAULT_CONTRAST;
   let lightThreshold = Config.DEFAULT_LIGHT_THRESHOLD;
   let autoDirection = Config.DEFAULT_AUTO_DIRECTION;
   let automaticWouldInvert = false;
@@ -53,7 +59,9 @@
       lightThreshold: Config.normalizeThreshold(result.autoThreshold),
       autoDirection: Config.normalizeDirection(result.autoDirection),
       invertImages: siteSettings.invertImages === true,
-      improveContrast: siteSettings.improveContrast === true
+      customCorrection: siteSettings.customCorrection === true || siteSettings.improveContrast === true,
+      customBrightness: Config.normalizeBrightness(siteSettings.customBrightness),
+      customContrast: Config.normalizeContrast(siteSettings.customContrast)
     };
     if (!key) return { ...sharedState, override: "auto", lastActive: false, lastAutoDirection: sharedState.autoDirection };
     const lastState = result.siteLastStates?.[key] || {};
@@ -139,33 +147,38 @@
 
       html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="dark"] {
         background: #eee !important;
-        color-scheme: dark !important;
+        color-scheme: light !important;
       }
 
       html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="light"] {
         background: #111 !important;
-        color-scheme: light !important;
+        color-scheme: dark !important;
       }
 
-      html[${ROOT_ATTR}="active"][${CONTRAST_ATTR}="true"] {
-        filter: invert(1) hue-rotate(180deg) brightness(1.06) contrast(1.08) !important;
+      html[${ROOT_ATTR}="active"][${CORRECTION_ATTR}="true"] {
+        filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1.06)) contrast(var(${CONTRAST_VAR}, 1.08)) !important;
       }
 
       html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
         filter: invert(1) hue-rotate(180deg) !important;
       }
 
-      html[${ROOT_ATTR}="active"][${CONTRAST_ATTR}="true"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
-        filter: contrast(0.93) brightness(0.94) invert(1) hue-rotate(180deg) !important;
+      html[${ROOT_ATTR}="active"][${CORRECTION_ATTR}="true"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
+        filter: contrast(var(${CONTRAST_INVERSE_VAR}, 0.93)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 0.94)) invert(1) hue-rotate(180deg) !important;
       }
     `;
     (document.head || document.documentElement).appendChild(style);
   }
 
   function updateRootSettings() {
-    document.documentElement.setAttribute(DIRECTION_ATTR, autoDirection);
-    document.documentElement.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
-    document.documentElement.setAttribute(CONTRAST_ATTR, String(improveContrast));
+    const root = document.documentElement;
+    root.setAttribute(DIRECTION_ATTR, autoDirection);
+    root.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
+    root.setAttribute(CORRECTION_ATTR, String(customCorrection));
+    root.style.setProperty(BRIGHTNESS_VAR, String(customBrightness));
+    root.style.setProperty(CONTRAST_VAR, String(customContrast));
+    root.style.setProperty(BRIGHTNESS_INVERSE_VAR, String(1 / customBrightness));
+    root.style.setProperty(CONTRAST_INVERSE_VAR, String(1 / customContrast));
   }
 
   function applyInversion() {
@@ -188,7 +201,9 @@
     lightThreshold = state.lightThreshold;
     autoDirection = state.autoDirection;
     invertImages = state.invertImages;
-    improveContrast = state.improveContrast;
+    customCorrection = state.customCorrection;
+    customBrightness = state.customBrightness;
+    customContrast = state.customContrast;
     const shouldPreapply = globalEnabled &&
       (state.override === "inverted" || (state.override === "auto" && state.lastActive && state.lastAutoDirection === state.autoDirection));
     if (!shouldPreapply || state.override === "original") return;
@@ -200,7 +215,11 @@
     document.documentElement.removeAttribute(ROOT_ATTR);
     document.documentElement.removeAttribute(DIRECTION_ATTR);
     document.documentElement.removeAttribute(INVERT_IMAGES_ATTR);
-    document.documentElement.removeAttribute(CONTRAST_ATTR);
+    document.documentElement.removeAttribute(CORRECTION_ATTR);
+    document.documentElement.style.removeProperty(BRIGHTNESS_VAR);
+    document.documentElement.style.removeProperty(CONTRAST_VAR);
+    document.documentElement.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
+    document.documentElement.style.removeProperty(CONTRAST_INVERSE_VAR);
     removeGlobalStyle();
   }
 
@@ -216,7 +235,9 @@
         lightThreshold,
         autoDirection,
         invertImages,
-        improveContrast
+        customCorrection,
+        customBrightness,
+        customContrast
       });
     } catch (_error) {
       // Background may be unavailable during extension reloads.
@@ -231,7 +252,9 @@
     lightThreshold = state.lightThreshold;
     autoDirection = state.autoDirection;
     invertImages = state.invertImages;
-    improveContrast = state.improveContrast;
+    customCorrection = state.customCorrection;
+    customBrightness = state.customBrightness;
+    customContrast = state.customContrast;
     if (!globalEnabled) {
       automaticWouldInvert = false;
       removeInversion();

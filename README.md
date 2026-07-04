@@ -39,7 +39,7 @@ npm run run:firefox
 - Auto Mode chooses an automatic direction: darken mostly-light pages (Dark) or lighten mostly-dark pages (Light).
 - Auto Mode includes a threshold slider for choosing how bright a page must be before automatic inversion applies.
 - Per-site controls choose whether images/media are restored to original colors or inverted with the page.
-- Per-site controls can enable a slight brightness/contrast boost while pages are inverted.
+- Per-site controls can enable custom brightness and contrast sliders while pages are inverted.
 - Per-site controls can set the current site to Automatic, Always inverted, or Always original.
 - Right-click the toolbar button and choose **Reset site to Automatic** to remove the site override.
 

@@ -69,11 +69,17 @@
   "popupInvertImagesDescription": {
     "message": "Leave media inverted with the page instead of restoring original colors."
   },
-  "popupImproveContrast": {
-    "message": "Improve contrast"
+  "popupCustomCorrection": {
+    "message": "Custom brightness and contrast"
   },
-  "popupImproveContrastDescription": {
-    "message": "Slightly boost brightness and contrast while inverted."
+  "popupCustomCorrectionDescription": {
+    "message": "Tune brightness and contrast while pages are inverted."
+  },
+  "popupBrightness": {
+    "message": "Brightness"
+  },
+  "popupContrast": {
+    "message": "Contrast"
   },
   "popupThisSite": {
     "message": "This site"
@@ -105,11 +111,27 @@
   "popupImagesRestored": {
     "message": "Images will keep original colors"
   },
-  "popupContrastImproved": {
-    "message": "Contrast boost enabled"
+  "popupCustomCorrectionEnabled": {
+    "message": "Custom correction enabled"
   },
-  "popupContrastNormal": {
-    "message": "Contrast boost disabled"
+  "popupCustomCorrectionDisabled": {
+    "message": "Custom correction disabled"
+  },
+  "popupBrightnessSet": {
+    "message": "Brightness set to $VALUE$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupContrastSet": {
+    "message": "Contrast set to $VALUE$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
   },
   "popupSiteAutomatic": {
     "message": "Site reset to automatic"
