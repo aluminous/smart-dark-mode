@@ -68,7 +68,8 @@ h1 {
   gap: 14px;
 }
 
-.setting-row + .setting-row {
+.setting-row + .setting-row,
+.correction-controls + .setting-row {
   margin-top: 12px;
 }
 
@@ -113,6 +114,24 @@ h1 {
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.section-desc {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.auto-status {
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.site-hint {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .mode-group {
@@ -218,6 +237,7 @@ h1 {
 }
 
 #auto-threshold-value,
+#image-shadow-strength-value,
 #custom-brightness-value,
 #custom-contrast-value {
   min-width: 46px;

@@ -25,6 +25,7 @@
   ],
   "background": {
     "scripts": [
+      "src/config.js",
       "src/background.js"
     ]
   },

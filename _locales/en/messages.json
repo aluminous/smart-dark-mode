@@ -99,6 +99,15 @@
   "popupSiteUnavailable": {
     "message": "Site settings are unavailable on this page."
   },
+  "popupSiteSettingsHint": {
+    "message": "The settings below apply to this site only."
+  },
+  "popupAutoDetectedInverted": {
+    "message": "Auto mode inverted this page."
+  },
+  "popupAutoDetectedOriginal": {
+    "message": "Auto mode left this page unchanged."
+  },
   "popupEnabledEverywhere": {
     "message": "Enabled everywhere"
   },
@@ -110,6 +119,29 @@
   },
   "popupImagesRestored": {
     "message": "Images will keep original colors"
+  },
+  "popupImageShadow": {
+    "message": "Image shadow"
+  },
+  "popupImageShadowDescription": {
+    "message": "Add a direction-aware shadow around restored images for contrast."
+  },
+  "popupImageShadowStrength": {
+    "message": "Shadow strength"
+  },
+  "popupImageShadowStrengthSet": {
+    "message": "Shadow strength set to $VALUE$",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupImageShadowEnabled": {
+    "message": "Image shadow enabled"
+  },
+  "popupImageShadowDisabled": {
+    "message": "Image shadow disabled"
   },
   "popupCustomCorrectionEnabled": {
     "message": "Custom correction enabled"

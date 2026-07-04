@@ -26,7 +26,7 @@
     <div class="section-heading compact">
       <div>
         <div id="auto-title" class="section-title" data-i18n="popupAutoMode">Auto Mode</div>
-        <div class="site" data-i18n="popupAutoModeDescription">Choose whether to darken light pages or lighten dark pages, and tune the threshold.</div>
+        <div class="section-desc" data-i18n="popupAutoModeDescription">Choose whether to darken light pages or lighten dark pages, and tune the threshold.</div>
       </div>
     </div>
 
@@ -57,7 +57,7 @@
       </span>
       <output id="auto-threshold-value" for="auto-threshold">55%</output>
     </label>
-    <input id="auto-threshold" class="threshold-slider" type="range" min="35" max="75" step="1">
+    <input id="auto-threshold" class="threshold-slider" type="range" step="1">
     <div class="slider-labels" aria-hidden="true">
       <span id="auto-threshold-left-label" data-i18n="popupAutoThresholdMorePages">More pages</span>
       <span id="auto-threshold-right-label" data-i18n="popupAutoThresholdFewerPages">Only very light</span>
@@ -87,7 +87,11 @@
       </label>
     </div>
 
+    <div id="auto-status" class="auto-status" hidden></div>
+
     <div class="divider"></div>
+
+    <div class="site-hint" data-i18n="popupSiteSettingsHint">The settings below apply to this site only.</div>
 
     <label class="setting-row">
       <span>
@@ -96,6 +100,24 @@
       </span>
       <input id="invert-images" type="checkbox">
     </label>
+
+    <label class="setting-row">
+      <span>
+        <strong data-i18n="popupImageShadow">Image shadow</strong>
+        <small data-i18n="popupImageShadowDescription">Add a direction-aware shadow around restored images for contrast.</small>
+      </span>
+      <input id="image-shadow" type="checkbox">
+    </label>
+
+    <div id="image-shadow-controls" class="correction-controls" hidden>
+      <label class="slider-setting" for="image-shadow-strength">
+        <span>
+          <strong data-i18n="popupImageShadowStrength">Shadow strength</strong>
+        </span>
+        <output id="image-shadow-strength-value" for="image-shadow-strength">70%</output>
+      </label>
+      <input id="image-shadow-strength" class="threshold-slider" type="range" step="1">
+    </div>
 
     <label class="setting-row">
       <span>
@@ -112,7 +134,7 @@
         </span>
         <output id="custom-brightness-value" for="custom-brightness">106%</output>
       </label>
-      <input id="custom-brightness" class="threshold-slider" type="range" min="80" max="140" step="1">
+      <input id="custom-brightness" class="threshold-slider" type="range" step="1">
 
       <label class="slider-setting correction-slider-setting" for="custom-contrast">
         <span>
@@ -120,7 +142,7 @@
         </span>
         <output id="custom-contrast-value" for="custom-contrast">108%</output>
       </label>
-      <input id="custom-contrast" class="threshold-slider" type="range" min="80" max="140" step="1">
+      <input id="custom-contrast" class="threshold-slider" type="range" step="1">
     </div>
   </section>
 

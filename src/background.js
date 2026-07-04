@@ -1,48 +1,15 @@
 "use strict";
 
+// Chrome runs the background as a service worker; Firefox loads config.js from the manifest.
+if (typeof importScripts === "function") importScripts("config.js");
+
 const api = typeof browser !== "undefined" ? browser : chrome;
+const Config = globalThis.AutoDarkConfig;
 const RESET_MENU_ID = "smart-dark-mode-reset-site";
-const tabStates = new Map();
-
-function message(name, substitutions) {
-  return api.i18n.getMessage(name, substitutions) || name;
-}
-
-function originFromUrl(url) {
-  try {
-    const parsed = new URL(url);
-    if (!/^https?:$/i.test(parsed.protocol)) return null;
-    return parsed.origin;
-  } catch (_error) {
-    return null;
-  }
-}
 
 async function getOverrides() {
   const result = await api.storage.local.get("siteOverrides");
   return result.siteOverrides || {};
-}
-
-function normalizeOverride(override) {
-  if (override === "dark") return "inverted";
-  if (override === "light") return "original";
-  if (override === "inverted" || override === "original" || override === "auto") return override;
-  return "auto";
-}
-
-function normalizeDirection(value) {
-  return value === "light" ? "light" : "dark";
-}
-
-async function getOverride(origin) {
-  if (!origin) return "auto";
-  const overrides = await getOverrides();
-  return normalizeOverride(overrides[origin]);
-}
-
-async function getGlobalEnabled() {
-  const result = await api.storage.local.get("globalEnabled");
-  return result.globalEnabled !== false;
 }
 
 async function setOverride(origin, override) {
@@ -53,129 +20,125 @@ async function setOverride(origin, override) {
   await api.storage.local.set({ siteOverrides: overrides });
 }
 
-async function messageTab(tabId, message) {
+async function getTabState(tabId) {
   try {
-    await api.tabs.sendMessage(tabId, message);
+    const state = await api.tabs.sendMessage(tabId, { type: "autoDarkMode:getState" });
+    return state || null;
   } catch (_error) {
-    // The tab may be a restricted page or may not have the content script loaded yet.
+    // Restricted page or the content script is not loaded yet.
+    return null;
   }
 }
 
-async function updateAction(tabId, origin, state = {}) {
-  const globalEnabled = state.globalEnabled ?? (await getGlobalEnabled());
-  const override = state.override || (await getOverride(origin));
-  const active = Boolean(state.active);
-  const automaticWouldInvert = Boolean(state.automaticWouldInvert);
+async function storedState(origin) {
+  const result = await api.storage.local.get(["globalEnabled", "siteOverrides"]);
+  return {
+    globalEnabled: result.globalEnabled !== false,
+    override: origin ? Config.normalizeOverride(result.siteOverrides?.[origin]) : "auto",
+    active: false,
+    automaticWouldInvert: false
+  };
+}
 
-  let badge = "A";
-  let title = message("actionAutomatic");
+async function updateAction(tabId, state) {
+  const globalEnabled = state.globalEnabled !== false;
+  const override = Config.normalizeOverride(state.override);
+
+  let badge = "";
+  let title = Config.i18nMessage("actionAutomatic");
   let color = "#666666";
 
   if (!globalEnabled) {
     badge = "OFF";
-    title = message("actionDisabled");
+    title = Config.i18nMessage("actionDisabled");
     color = "#8f2f2f";
   } else if (override === "inverted") {
     badge = "I";
-    title = message("actionForcedInverted");
+    title = Config.i18nMessage("actionForcedInverted");
     color = "#111111";
   } else if (override === "original") {
     badge = "O";
-    title = message("actionForcedOriginal");
+    title = Config.i18nMessage("actionForcedOriginal");
     color = "#d8d8d8";
-  } else if (active || automaticWouldInvert) {
-    title = message("actionAutomaticInverted");
+  } else if (state.active || state.automaticWouldInvert) {
+    badge = "A";
+    title = Config.i18nMessage("actionAutomaticInverted");
     color = "#234f8f";
   }
 
-  await api.action.setBadgeText({ tabId, text: badge });
-  await api.action.setBadgeBackgroundColor({ tabId, color });
-  await api.action.setTitle({ tabId, title });
+  try {
+    await api.action.setBadgeText({ tabId, text: badge });
+    if (badge) await api.action.setBadgeBackgroundColor({ tabId, color });
+    await api.action.setTitle({ tabId, title });
+  } catch (_error) {
+    // The tab may have been closed.
+  }
 }
 
-async function reevaluateTab(tabId) {
-  await messageTab(tabId, { type: "autoDarkMode:reevaluate" });
+async function refreshBadge(tabId, url) {
+  const state = (await getTabState(tabId)) || (await storedState(Config.originFromUrl(url)));
+  await updateAction(tabId, state);
+}
+
+async function migrateImproveContrast() {
+  const result = await api.storage.local.get("siteSettings");
+  const siteSettings = result.siteSettings;
+  if (!siteSettings) return;
+  let changed = false;
+  for (const settings of Object.values(siteSettings)) {
+    if (!settings || !("improveContrast" in settings)) continue;
+    if (settings.improveContrast === true) settings.customCorrection = true;
+    delete settings.improveContrast;
+    changed = true;
+  }
+  if (changed) await api.storage.local.set({ siteSettings });
 }
 
 api.runtime.onInstalled.addListener(() => {
   api.contextMenus.removeAll(() => {
     api.contextMenus.create({
       id: RESET_MENU_ID,
-      title: message("contextResetSite"),
+      title: Config.i18nMessage("contextResetSite"),
       contexts: ["action"]
     });
   });
+  migrateImproveContrast();
 });
 
 api.runtime.onMessage.addListener((message, sender) => {
   if (!message || message.type !== "autoDarkMode:state" || !sender.tab?.id) return undefined;
-  const tabId = sender.tab.id;
-  tabStates.set(tabId, {
-    origin: message.origin,
-    active: Boolean(message.active),
-    automaticWouldInvert: Boolean(message.automaticWouldInvert),
-    override: normalizeOverride(message.override),
-    globalEnabled: message.globalEnabled !== false,
-    autoDirection: normalizeDirection(message.autoDirection),
-    invertImages: message.invertImages === true,
-    customCorrection: message.customCorrection === true,
-    customBrightness: Number(message.customBrightness),
-    customContrast: Number(message.customContrast)
-  });
-  updateAction(tabId, message.origin, tabStates.get(tabId));
+  updateAction(sender.tab.id, message);
   return undefined;
 });
 
 api.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== RESET_MENU_ID || !tab?.id) return;
-  const origin = originFromUrl(tab.url);
+  const origin = Config.originFromUrl(tab.url);
   if (!origin) return;
+  // Content scripts watch siteOverrides and re-evaluate/report on their own.
   await setOverride(origin, "auto");
-  const state = tabStates.get(tab.id) || {};
-  tabStates.set(tab.id, { ...state, origin, override: "auto" });
-  await updateAction(tab.id, origin, tabStates.get(tab.id));
-  await reevaluateTab(tab.id);
 });
 
-api.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || (!changes.globalEnabled && !changes.autoDirection && !changes.siteOverrides && !changes.siteSettings)) return;
-  for (const [tabId, state] of tabStates) {
-    const nextState = { ...state };
-    if (changes.globalEnabled) nextState.globalEnabled = changes.globalEnabled.newValue !== false;
-    if (changes.autoDirection) nextState.autoDirection = normalizeDirection(changes.autoDirection.newValue);
-    if (changes.siteSettings && state.origin) {
-      const siteSettings = changes.siteSettings.newValue?.[state.origin] || {};
-      nextState.invertImages = siteSettings.invertImages === true;
-      nextState.customCorrection = siteSettings.customCorrection === true || siteSettings.improveContrast === true;
-      nextState.customBrightness = Number(siteSettings.customBrightness);
-      nextState.customContrast = Number(siteSettings.customContrast);
-    }
-    if (changes.siteOverrides && state.origin) {
-      nextState.override = normalizeOverride(changes.siteOverrides.newValue?.[state.origin]);
-    }
-    tabStates.set(tabId, nextState);
-    updateAction(tabId, state.origin, nextState);
+api.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== "local" || (!changes.globalEnabled && !changes.siteOverrides)) return;
+  // Content scripts re-report their own tabs; this covers restricted pages.
+  const tabs = await api.tabs.query({ active: true });
+  for (const tab of tabs) {
+    if (tab.id !== undefined) refreshBadge(tab.id, tab.url);
   }
 });
 
 api.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await api.tabs.get(tabId);
-    const origin = originFromUrl(tab.url);
-    await updateAction(tabId, origin, tabStates.get(tabId));
+    await refreshBadge(tabId, tab.url);
   } catch (_error) {
     // Ignore closed or inaccessible tabs.
   }
 });
 
 api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === "loading") tabStates.delete(tabId);
   if (changeInfo.status === "complete" || changeInfo.url) {
-    const origin = originFromUrl(tab.url || changeInfo.url);
-    await updateAction(tabId, origin, tabStates.get(tabId));
+    await refreshBadge(tabId, tab.url || changeInfo.url);
   }
-});
-
-api.tabs.onRemoved.addListener((tabId) => {
-  tabStates.delete(tabId);
 });

@@ -8,13 +8,16 @@
   const ROOT_ATTR = "data-auto-dark-mode";
   const DIRECTION_ATTR = "data-auto-dark-mode-direction";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
-  const CORRECTION_ATTR = "data-auto-dark-mode-correction";
   const BRIGHTNESS_VAR = "--auto-dark-mode-brightness";
   const CONTRAST_VAR = "--auto-dark-mode-contrast";
   const BRIGHTNESS_INVERSE_VAR = "--auto-dark-mode-brightness-inverse";
   const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
+  const SHADOW_COLOR_VAR = "--auto-dark-mode-shadow-color";
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
+  const LAST_STATE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+  const LAST_STATE_REFRESH_MS = 24 * 60 * 60 * 1000;
+  const LAST_STATE_MAX_ENTRIES = 200;
   const EXCEPTION_SELECTOR = [
     "img",
     "video",
@@ -30,6 +33,8 @@
   let currentOverride = "auto";
   let globalEnabled = true;
   let invertImages = false;
+  let imageShadow = false;
+  let imageShadowStrength = Config.DEFAULT_IMAGE_SHADOW_STRENGTH;
   let customCorrection = false;
   let customBrightness = Config.DEFAULT_BRIGHTNESS;
   let customContrast = Config.DEFAULT_CONTRAST;
@@ -43,34 +48,36 @@
     return location.origin;
   }
 
-  function normalizeOverride(override) {
-    if (override === "dark") return "inverted";
-    if (override === "light") return "original";
-    if (override === "inverted" || override === "original" || override === "auto") return override;
-    return "auto";
-  }
-
   async function getSiteState() {
     const key = originKey();
     const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "autoDirection", "siteOverrides", "siteLastStates", "siteSettings"]);
-    const siteSettings = key ? result.siteSettings?.[key] || {} : {};
     const sharedState = {
+      ...Config.normalizeSiteSettings(key ? result.siteSettings?.[key] : null),
       globalEnabled: result.globalEnabled !== false,
       lightThreshold: Config.normalizeThreshold(result.autoThreshold),
-      autoDirection: Config.normalizeDirection(result.autoDirection),
-      invertImages: siteSettings.invertImages === true,
-      customCorrection: siteSettings.customCorrection === true || siteSettings.improveContrast === true,
-      customBrightness: Config.normalizeBrightness(siteSettings.customBrightness),
-      customContrast: Config.normalizeContrast(siteSettings.customContrast)
+      autoDirection: Config.normalizeDirection(result.autoDirection)
     };
     if (!key) return { ...sharedState, override: "auto", lastActive: false, lastAutoDirection: sharedState.autoDirection };
     const lastState = result.siteLastStates?.[key] || {};
     return {
       ...sharedState,
-      override: normalizeOverride(result.siteOverrides?.[key]),
+      override: Config.normalizeOverride(result.siteOverrides?.[key]),
       lastActive: Boolean(lastState.active),
       lastAutoDirection: Config.normalizeDirection(lastState.autoDirection)
     };
+  }
+
+  function adoptState(state) {
+    currentOverride = state.override;
+    globalEnabled = state.globalEnabled;
+    lightThreshold = state.lightThreshold;
+    autoDirection = state.autoDirection;
+    invertImages = state.invertImages;
+    imageShadow = state.imageShadow;
+    imageShadowStrength = state.imageShadowStrength;
+    customCorrection = state.customCorrection;
+    customBrightness = state.customBrightness;
+    customContrast = state.customContrast;
   }
 
   async function rememberSiteState() {
@@ -78,12 +85,31 @@
     if (!key) return;
     const result = await api.storage.local.get("siteLastStates");
     const siteLastStates = result.siteLastStates || {};
+    const now = Date.now();
+    const previous = siteLastStates[key];
+    const unchanged = previous &&
+      previous.active === active &&
+      previous.automaticWouldInvert === automaticWouldInvert &&
+      previous.autoDirection === autoDirection;
+    if (unchanged && now - previous.updatedAt < LAST_STATE_REFRESH_MS) return;
     siteLastStates[key] = {
       active,
       automaticWouldInvert,
       autoDirection,
-      updatedAt: Date.now()
+      updatedAt: now
     };
+    for (const [origin, entry] of Object.entries(siteLastStates)) {
+      if (!entry || !Number.isFinite(entry.updatedAt) || now - entry.updatedAt > LAST_STATE_TTL_MS) {
+        delete siteLastStates[origin];
+      }
+    }
+    const origins = Object.keys(siteLastStates);
+    if (origins.length > LAST_STATE_MAX_ENTRIES) {
+      origins.sort((a, b) => siteLastStates[a].updatedAt - siteLastStates[b].updatedAt);
+      for (const origin of origins.slice(0, origins.length - LAST_STATE_MAX_ENTRIES)) {
+        delete siteLastStates[origin];
+      }
+    }
     await api.storage.local.set({ siteLastStates });
   }
 
@@ -140,9 +166,13 @@
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
+    // Brightness/contrast vars default to 1 (no correction) and the shadow color
+    // to transparent (no shadow); updateRootSettings sets them when enabled.
+    // Exception elements are counter-inverted so they keep their original look;
+    // nested exceptions are excluded so they are not double-inverted.
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
-        filter: invert(1) hue-rotate(180deg) !important;
+        filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1)) contrast(var(${CONTRAST_VAR}, 1)) !important;
       }
 
       html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="dark"] {
@@ -155,16 +185,8 @@
         color-scheme: dark !important;
       }
 
-      html[${ROOT_ATTR}="active"][${CORRECTION_ATTR}="true"] {
-        filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1.06)) contrast(var(${CONTRAST_VAR}, 1.08)) !important;
-      }
-
-      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
-        filter: invert(1) hue-rotate(180deg) !important;
-      }
-
-      html[${ROOT_ATTR}="active"][${CORRECTION_ATTR}="true"]:not([${INVERT_IMAGES_ATTR}="true"]) ${EXCEPTION_SELECTOR} {
-        filter: contrast(var(${CONTRAST_INVERSE_VAR}, 0.93)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 0.94)) invert(1) hue-rotate(180deg) !important;
+      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) :is(${EXCEPTION_SELECTOR}):not(:is(${EXCEPTION_SELECTOR}) *) {
+        filter: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent)) !important;
       }
     `;
     (document.head || document.documentElement).appendChild(style);
@@ -174,11 +196,25 @@
     const root = document.documentElement;
     root.setAttribute(DIRECTION_ATTR, autoDirection);
     root.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
-    root.setAttribute(CORRECTION_ATTR, String(customCorrection));
-    root.style.setProperty(BRIGHTNESS_VAR, String(customBrightness));
-    root.style.setProperty(CONTRAST_VAR, String(customContrast));
-    root.style.setProperty(BRIGHTNESS_INVERSE_VAR, String(1 / customBrightness));
-    root.style.setProperty(CONTRAST_INVERSE_VAR, String(1 / customContrast));
+    if (imageShadow) {
+      // The shadow renders inside the counter-invert filter, so the root filter
+      // inverts it again: black becomes a light glow on darkened pages.
+      const shadowRgb = autoDirection === "light" ? "255 255 255" : "0 0 0";
+      root.style.setProperty(SHADOW_COLOR_VAR, `rgb(${shadowRgb} / ${imageShadowStrength})`);
+    } else {
+      root.style.removeProperty(SHADOW_COLOR_VAR);
+    }
+    if (customCorrection) {
+      root.style.setProperty(BRIGHTNESS_VAR, String(customBrightness));
+      root.style.setProperty(CONTRAST_VAR, String(customContrast));
+      root.style.setProperty(BRIGHTNESS_INVERSE_VAR, String(1 / customBrightness));
+      root.style.setProperty(CONTRAST_INVERSE_VAR, String(1 / customContrast));
+    } else {
+      root.style.removeProperty(BRIGHTNESS_VAR);
+      root.style.removeProperty(CONTRAST_VAR);
+      root.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
+      root.style.removeProperty(CONTRAST_INVERSE_VAR);
+    }
   }
 
   function applyInversion() {
@@ -196,49 +232,48 @@
     if (!document.documentElement) return;
     const state = await getSiteState();
     if (evaluationStarted) return;
-    currentOverride = state.override;
-    globalEnabled = state.globalEnabled;
-    lightThreshold = state.lightThreshold;
-    autoDirection = state.autoDirection;
-    invertImages = state.invertImages;
-    customCorrection = state.customCorrection;
-    customBrightness = state.customBrightness;
-    customContrast = state.customContrast;
+    adoptState(state);
     const shouldPreapply = globalEnabled &&
       (state.override === "inverted" || (state.override === "auto" && state.lastActive && state.lastAutoDirection === state.autoDirection));
-    if (!shouldPreapply || state.override === "original") return;
+    if (!shouldPreapply) return;
     applyInversion();
   }
 
   function removeInversion() {
     active = false;
-    document.documentElement.removeAttribute(ROOT_ATTR);
-    document.documentElement.removeAttribute(DIRECTION_ATTR);
-    document.documentElement.removeAttribute(INVERT_IMAGES_ATTR);
-    document.documentElement.removeAttribute(CORRECTION_ATTR);
-    document.documentElement.style.removeProperty(BRIGHTNESS_VAR);
-    document.documentElement.style.removeProperty(CONTRAST_VAR);
-    document.documentElement.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
-    document.documentElement.style.removeProperty(CONTRAST_INVERSE_VAR);
+    const root = document.documentElement;
+    root.removeAttribute(ROOT_ATTR);
+    root.removeAttribute(DIRECTION_ATTR);
+    root.removeAttribute(INVERT_IMAGES_ATTR);
+    root.style.removeProperty(SHADOW_COLOR_VAR);
+    root.style.removeProperty(BRIGHTNESS_VAR);
+    root.style.removeProperty(CONTRAST_VAR);
+    root.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
+    root.style.removeProperty(CONTRAST_INVERSE_VAR);
     removeGlobalStyle();
+  }
+
+  function currentState() {
+    return {
+      origin: originKey(),
+      active,
+      automaticWouldInvert,
+      override: currentOverride,
+      globalEnabled,
+      lightThreshold,
+      autoDirection,
+      invertImages,
+      imageShadow,
+      imageShadowStrength,
+      customCorrection,
+      customBrightness,
+      customContrast
+    };
   }
 
   async function reportState() {
     try {
-      await api.runtime.sendMessage({
-        type: "autoDarkMode:state",
-        origin: originKey(),
-        active,
-        automaticWouldInvert,
-        override: currentOverride,
-        globalEnabled,
-        lightThreshold,
-        autoDirection,
-        invertImages,
-        customCorrection,
-        customBrightness,
-        customContrast
-      });
+      await api.runtime.sendMessage({ type: "autoDarkMode:state", ...currentState() });
     } catch (_error) {
       // Background may be unavailable during extension reloads.
     }
@@ -247,14 +282,7 @@
   async function evaluate() {
     evaluationStarted = true;
     const state = await getSiteState();
-    currentOverride = state.override;
-    globalEnabled = state.globalEnabled;
-    lightThreshold = state.lightThreshold;
-    autoDirection = state.autoDirection;
-    invertImages = state.invertImages;
-    customCorrection = state.customCorrection;
-    customBrightness = state.customBrightness;
-    customContrast = state.customContrast;
+    adoptState(state);
     if (!globalEnabled) {
       automaticWouldInvert = false;
       removeInversion();
@@ -270,9 +298,10 @@
     await reportState();
   }
 
-  api.runtime.onMessage.addListener((message) => {
-    if (!message || message.type !== "autoDarkMode:reevaluate") return undefined;
-    evaluate();
+  api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "autoDarkMode:getState") {
+      sendResponse(currentState());
+    }
     return undefined;
   });
 

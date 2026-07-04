@@ -99,6 +99,15 @@
   "popupSiteUnavailable": {
     "message": "이 페이지에서는 사이트 설정을 사용할 수 없습니다."
   },
+  "popupSiteSettingsHint": {
+    "message": "아래 설정은 이 사이트에만 적용됩니다."
+  },
+  "popupAutoDetectedInverted": {
+    "message": "자동 모드가 이 페이지를 반전했습니다."
+  },
+  "popupAutoDetectedOriginal": {
+    "message": "자동 모드가 이 페이지를 그대로 두었습니다."
+  },
   "popupEnabledEverywhere": {
     "message": "모든 사이트에서 사용"
   },
@@ -110,6 +119,29 @@
   },
   "popupImagesRestored": {
     "message": "이미지가 원래 색을 유지합니다"
+  },
+  "popupImageShadow": {
+    "message": "이미지 그림자"
+  },
+  "popupImageShadowDescription": {
+    "message": "복원된 이미지 주변에 방향에 맞는 그림자를 추가해 대비를 높입니다."
+  },
+  "popupImageShadowStrength": {
+    "message": "그림자 강도"
+  },
+  "popupImageShadowStrengthSet": {
+    "message": "그림자 강도를 $VALUE$로 설정했습니다",
+    "placeholders": {
+      "value": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupImageShadowEnabled": {
+    "message": "이미지 그림자가 켜졌습니다"
+  },
+  "popupImageShadowDisabled": {
+    "message": "이미지 그림자가 꺼졌습니다"
   },
   "popupCustomCorrectionEnabled": {
     "message": "사용자 지정 보정이 켜졌습니다"
