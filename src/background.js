@@ -30,6 +30,10 @@ function normalizeOverride(override) {
   return "auto";
 }
 
+function normalizeDirection(value) {
+  return value === "light" ? "light" : "dark";
+}
+
 async function getOverride(origin) {
   if (!origin) return "auto";
   const overrides = await getOverrides();
@@ -61,7 +65,7 @@ async function updateAction(tabId, origin, state = {}) {
   const globalEnabled = state.globalEnabled ?? (await getGlobalEnabled());
   const override = state.override || (await getOverride(origin));
   const active = Boolean(state.active);
-  const automaticWouldDarken = Boolean(state.automaticWouldDarken);
+  const automaticWouldInvert = Boolean(state.automaticWouldInvert);
 
   let badge = "A";
   let title = message("actionAutomatic");
@@ -79,7 +83,7 @@ async function updateAction(tabId, origin, state = {}) {
     badge = "O";
     title = message("actionForcedOriginal");
     color = "#d8d8d8";
-  } else if (active || automaticWouldDarken) {
+  } else if (active || automaticWouldInvert) {
     title = message("actionAutomaticInverted");
     color = "#234f8f";
   }
@@ -94,10 +98,12 @@ async function reevaluateTab(tabId) {
 }
 
 api.runtime.onInstalled.addListener(() => {
-  api.contextMenus.create({
-    id: RESET_MENU_ID,
-    title: message("contextResetSite"),
-    contexts: ["action"]
+  api.contextMenus.removeAll(() => {
+    api.contextMenus.create({
+      id: RESET_MENU_ID,
+      title: message("contextResetSite"),
+      contexts: ["action"]
+    });
   });
 });
 
@@ -107,9 +113,10 @@ api.runtime.onMessage.addListener((message, sender) => {
   tabStates.set(tabId, {
     origin: message.origin,
     active: Boolean(message.active),
-    automaticWouldDarken: Boolean(message.automaticWouldDarken),
+    automaticWouldInvert: Boolean(message.automaticWouldInvert),
     override: normalizeOverride(message.override),
     globalEnabled: message.globalEnabled !== false,
+    autoDirection: normalizeDirection(message.autoDirection),
     invertImages: message.invertImages === true,
     improveContrast: message.improveContrast === true
   });
@@ -129,10 +136,11 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 api.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || (!changes.globalEnabled && !changes.siteOverrides && !changes.siteSettings)) return;
+  if (areaName !== "local" || (!changes.globalEnabled && !changes.autoDirection && !changes.siteOverrides && !changes.siteSettings)) return;
   for (const [tabId, state] of tabStates) {
     const nextState = { ...state };
     if (changes.globalEnabled) nextState.globalEnabled = changes.globalEnabled.newValue !== false;
+    if (changes.autoDirection) nextState.autoDirection = normalizeDirection(changes.autoDirection.newValue);
     if (changes.siteSettings && state.origin) {
       const siteSettings = changes.siteSettings.newValue?.[state.origin] || {};
       nextState.invertImages = siteSettings.invertImages === true;

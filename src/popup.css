@@ -121,6 +121,60 @@ h1 {
   gap: 6px;
 }
 
+.direction-group {
+  margin-bottom: 14px;
+}
+
+.direction-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.direction-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.direction-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(12, 17, 29, 0.52);
+  cursor: pointer;
+}
+
+.direction-option:has(input:checked) {
+  border-color: rgba(138, 180, 255, 0.72);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(138, 180, 255, 0.08);
+}
+
+.direction-option input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.direction-option small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.direction-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.direction-title {
+  font-weight: 700;
+}
+
 .mode-option {
   display: flex;
   align-items: center;

@@ -3,11 +3,12 @@
 
   const api = typeof browser !== "undefined" ? browser : chrome;
   const Color = globalThis.AutoDarkColor;
+  const Config = globalThis.AutoDarkConfig;
   const STYLE_ID = "auto-dark-mode-style";
   const ROOT_ATTR = "data-auto-dark-mode";
+  const DIRECTION_ATTR = "data-auto-dark-mode-direction";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
   const CONTRAST_ATTR = "data-auto-dark-mode-contrast";
-  const DEFAULT_LIGHT_THRESHOLD = 0.55;
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
   const EXCEPTION_SELECTOR = [
@@ -26,8 +27,9 @@
   let globalEnabled = true;
   let invertImages = false;
   let improveContrast = false;
-  let lightThreshold = DEFAULT_LIGHT_THRESHOLD;
-  let automaticWouldDarken = false;
+  let lightThreshold = Config.DEFAULT_LIGHT_THRESHOLD;
+  let autoDirection = Config.DEFAULT_AUTO_DIRECTION;
+  let automaticWouldInvert = false;
   let evaluationStarted = false;
 
   function originKey() {
@@ -42,27 +44,24 @@
     return "auto";
   }
 
-  function normalizeThreshold(value) {
-    const threshold = Number(value);
-    if (!Number.isFinite(threshold)) return DEFAULT_LIGHT_THRESHOLD;
-    return Math.min(0.9, Math.max(0.1, threshold));
-  }
-
   async function getSiteState() {
     const key = originKey();
-    const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "siteOverrides", "siteLastStates", "siteSettings"]);
+    const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "autoDirection", "siteOverrides", "siteLastStates", "siteSettings"]);
     const siteSettings = key ? result.siteSettings?.[key] || {} : {};
     const sharedState = {
       globalEnabled: result.globalEnabled !== false,
-      lightThreshold: normalizeThreshold(result.autoThreshold),
+      lightThreshold: Config.normalizeThreshold(result.autoThreshold),
+      autoDirection: Config.normalizeDirection(result.autoDirection),
       invertImages: siteSettings.invertImages === true,
       improveContrast: siteSettings.improveContrast === true
     };
-    if (!key) return { ...sharedState, override: "auto", lastActive: false };
+    if (!key) return { ...sharedState, override: "auto", lastActive: false, lastAutoDirection: sharedState.autoDirection };
+    const lastState = result.siteLastStates?.[key] || {};
     return {
       ...sharedState,
       override: normalizeOverride(result.siteOverrides?.[key]),
-      lastActive: Boolean(result.siteLastStates?.[key]?.active)
+      lastActive: Boolean(lastState.active),
+      lastAutoDirection: Config.normalizeDirection(lastState.autoDirection)
     };
   }
 
@@ -73,7 +72,8 @@
     const siteLastStates = result.siteLastStates || {};
     siteLastStates[key] = {
       active,
-      automaticWouldDarken,
+      automaticWouldInvert,
+      autoDirection,
       updatedAt: Date.now()
     };
     await api.storage.local.set({ siteLastStates });
@@ -134,9 +134,17 @@
     style.id = STYLE_ID;
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+
+      html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="dark"] {
         background: #eee !important;
         color-scheme: dark !important;
-        filter: invert(1) hue-rotate(180deg) !important;
+      }
+
+      html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="light"] {
+        background: #111 !important;
+        color-scheme: light !important;
       }
 
       html[${ROOT_ATTR}="active"][${CONTRAST_ATTR}="true"] {
@@ -155,11 +163,12 @@
   }
 
   function updateRootSettings() {
+    document.documentElement.setAttribute(DIRECTION_ATTR, autoDirection);
     document.documentElement.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
     document.documentElement.setAttribute(CONTRAST_ATTR, String(improveContrast));
   }
 
-  function applyDarkMode() {
+  function applyInversion() {
     active = true;
     ensureGlobalStyle();
     updateRootSettings();
@@ -177,16 +186,19 @@
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
     lightThreshold = state.lightThreshold;
+    autoDirection = state.autoDirection;
     invertImages = state.invertImages;
     improveContrast = state.improveContrast;
-    const shouldPreapply = globalEnabled && (state.override === "inverted" || (state.override === "auto" && state.lastActive));
+    const shouldPreapply = globalEnabled &&
+      (state.override === "inverted" || (state.override === "auto" && state.lastActive && state.lastAutoDirection === state.autoDirection));
     if (!shouldPreapply || state.override === "original") return;
-    applyDarkMode();
+    applyInversion();
   }
 
-  function removeDarkMode() {
+  function removeInversion() {
     active = false;
     document.documentElement.removeAttribute(ROOT_ATTR);
+    document.documentElement.removeAttribute(DIRECTION_ATTR);
     document.documentElement.removeAttribute(INVERT_IMAGES_ATTR);
     document.documentElement.removeAttribute(CONTRAST_ATTR);
     removeGlobalStyle();
@@ -198,10 +210,11 @@
         type: "autoDarkMode:state",
         origin: originKey(),
         active,
-        automaticWouldDarken,
+        automaticWouldInvert,
         override: currentOverride,
         globalEnabled,
         lightThreshold,
+        autoDirection,
         invertImages,
         improveContrast
       });
@@ -216,18 +229,20 @@
     currentOverride = state.override;
     globalEnabled = state.globalEnabled;
     lightThreshold = state.lightThreshold;
+    autoDirection = state.autoDirection;
     invertImages = state.invertImages;
     improveContrast = state.improveContrast;
     if (!globalEnabled) {
-      automaticWouldDarken = false;
-      removeDarkMode();
+      automaticWouldInvert = false;
+      removeInversion();
       await reportState();
       return;
     }
-    automaticWouldDarken = detectMostlyLight();
-    const shouldDarken = currentOverride === "inverted" || (currentOverride === "auto" && automaticWouldDarken);
-    if (shouldDarken) applyDarkMode();
-    else removeDarkMode();
+    const mostlyLight = detectMostlyLight();
+    automaticWouldInvert = autoDirection === "light" ? !mostlyLight : mostlyLight;
+    const shouldInvert = currentOverride === "inverted" || (currentOverride === "auto" && automaticWouldInvert);
+    if (shouldInvert) applyInversion();
+    else removeInversion();
     await rememberSiteState();
     await reportState();
   }
@@ -241,7 +256,7 @@
   api.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== "local") return;
     const key = originKey();
-    const globalChanged = Boolean(changes.globalEnabled || changes.autoThreshold);
+    const globalChanged = Boolean(changes.globalEnabled || changes.autoThreshold || changes.autoDirection);
     const visualSettingChanged = key && Boolean(changes.siteSettings) &&
       JSON.stringify(changes.siteSettings.oldValue?.[key] || {}) !== JSON.stringify(changes.siteSettings.newValue?.[key] || {});
     const siteOverrideChanged = key && Boolean(changes.siteOverrides) &&

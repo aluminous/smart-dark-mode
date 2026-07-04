@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
+  <script src="config.js" defer></script>
   <script src="popup.js" defer></script>
 </head>
 <body>
@@ -25,21 +26,41 @@
     <div class="section-heading compact">
       <div>
         <div id="auto-title" class="section-title" data-i18n="popupAutoMode">Auto Mode</div>
-        <div class="site" data-i18n="popupAutoModeDescription">Tune when automatic mode should invert a page.</div>
+        <div class="site" data-i18n="popupAutoModeDescription">Choose whether to darken light pages or lighten dark pages, and tune the threshold.</div>
+      </div>
+    </div>
+
+    <div class="direction-group" role="radiogroup" aria-labelledby="auto-direction-label">
+      <span id="auto-direction-label" class="direction-label" data-i18n="popupAutoDirection">Automatic direction</span>
+      <div class="direction-options">
+        <label class="direction-option">
+          <input type="radio" name="auto-direction" value="dark">
+          <span class="direction-text">
+            <span class="direction-title" data-i18n="popupAutoDirectionDark">Dark</span>
+            <small data-i18n="popupAutoDirectionDarkHint">Darken light pages</small>
+          </span>
+        </label>
+        <label class="direction-option">
+          <input type="radio" name="auto-direction" value="light">
+          <span class="direction-text">
+            <span class="direction-title" data-i18n="popupAutoDirectionLight">Light</span>
+            <small data-i18n="popupAutoDirectionLightHint">Lighten dark pages</small>
+          </span>
+        </label>
       </div>
     </div>
 
     <label class="slider-setting" for="auto-threshold">
       <span>
         <strong data-i18n="popupAutoThreshold">Inversion threshold</strong>
-        <small data-i18n="popupAutoThresholdDescription">Higher values only invert brighter pages.</small>
+        <small id="auto-threshold-description" data-i18n="popupAutoThresholdDescription">Higher values only invert brighter pages.</small>
       </span>
       <output id="auto-threshold-value" for="auto-threshold">55%</output>
     </label>
     <input id="auto-threshold" class="threshold-slider" type="range" min="35" max="75" step="1">
     <div class="slider-labels" aria-hidden="true">
-      <span data-i18n="popupAutoThresholdMorePages">More pages</span>
-      <span data-i18n="popupAutoThresholdFewerPages">Only very light</span>
+      <span id="auto-threshold-left-label" data-i18n="popupAutoThresholdMorePages">More pages</span>
+      <span id="auto-threshold-right-label" data-i18n="popupAutoThresholdFewerPages">Only very light</span>
     </div>
   </section>
 
@@ -54,15 +75,15 @@
     <div class="mode-group">
       <label class="mode-option">
         <input type="radio" name="site-mode" value="auto">
-        <span data-i18n="popupAutomaticDark">Automatic (Dark)</span>
+        <span data-i18n="popupAutomatic">Automatic</span>
       </label>
       <label class="mode-option">
         <input type="radio" name="site-mode" value="inverted">
-        <span data-i18n="popupForceInverted">Force inverted</span>
+        <span data-i18n="popupForceInverted">Always inverted</span>
       </label>
       <label class="mode-option">
         <input type="radio" name="site-mode" value="original">
-        <span data-i18n="popupForceOriginal">Force original</span>
+        <span data-i18n="popupForceOriginal">Always original</span>
       </label>
     </div>
 

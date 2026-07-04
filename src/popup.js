@@ -1,14 +1,22 @@
 "use strict";
 
 const api = typeof browser !== "undefined" ? browser : chrome;
+const Config = globalThis.AutoDarkConfig;
 const globalEnabledInput = document.getElementById("global-enabled");
 const autoThresholdInput = document.getElementById("auto-threshold");
 const autoThresholdValue = document.getElementById("auto-threshold-value");
+const autoThresholdDescription = document.getElementById("auto-threshold-description");
+const autoThresholdLeftLabel = document.getElementById("auto-threshold-left-label");
+const autoThresholdRightLabel = document.getElementById("auto-threshold-right-label");
+const autoDirectionInputs = Array.from(document.querySelectorAll("input[name='auto-direction']"));
 const invertImagesInput = document.getElementById("invert-images");
 const improveContrastInput = document.getElementById("improve-contrast");
 const siteLabel = document.getElementById("site-label");
 const status = document.getElementById("status");
 const siteModeInputs = Array.from(document.querySelectorAll("input[name='site-mode']"));
+
+autoThresholdInput.min = String(Math.round(Config.THRESHOLD_MIN * 100));
+autoThresholdInput.max = String(Math.round(Config.THRESHOLD_MAX * 100));
 
 let activeTab = null;
 let activeOrigin = null;
@@ -39,22 +47,29 @@ async function getActiveTab() {
   return tabs[0] || null;
 }
 
-function normalizeThreshold(value) {
-  const threshold = Number(value);
-  if (!Number.isFinite(threshold)) return 0.55;
-  return Math.min(0.75, Math.max(0.35, threshold));
-}
-
 function updateThresholdLabel() {
   autoThresholdValue.textContent = `${autoThresholdInput.value}%`;
 }
 
+function renderThresholdLabels(direction) {
+  if (direction === "light") {
+    autoThresholdDescription.textContent = message("popupAutoThresholdDescriptionLight");
+    autoThresholdLeftLabel.textContent = message("popupAutoThresholdOnlyDark");
+    autoThresholdRightLabel.textContent = message("popupAutoThresholdMorePages");
+  } else {
+    autoThresholdDescription.textContent = message("popupAutoThresholdDescription");
+    autoThresholdLeftLabel.textContent = message("popupAutoThresholdMorePages");
+    autoThresholdRightLabel.textContent = message("popupAutoThresholdFewerPages");
+  }
+}
+
 async function getSettings() {
-  const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "siteOverrides", "siteSettings"]);
+  const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "autoDirection", "siteOverrides", "siteSettings"]);
   const siteSettings = activeOrigin ? result.siteSettings?.[activeOrigin] || {} : {};
   return {
     globalEnabled: result.globalEnabled !== false,
-    autoThreshold: normalizeThreshold(result.autoThreshold),
+    autoThreshold: Config.normalizeThreshold(result.autoThreshold),
+    autoDirection: Config.normalizeDirection(result.autoDirection),
     invertImages: siteSettings.invertImages === true,
     improveContrast: siteSettings.improveContrast === true,
     siteOverrides: result.siteOverrides || {}
@@ -110,6 +125,8 @@ async function render() {
   globalEnabledInput.checked = settings.globalEnabled;
   autoThresholdInput.value = String(Math.round(settings.autoThreshold * 100));
   updateThresholdLabel();
+  renderThresholdLabels(settings.autoDirection);
+  for (const input of autoDirectionInputs) input.checked = input.value === settings.autoDirection;
   invertImagesInput.checked = settings.invertImages;
   improveContrastInput.checked = settings.improveContrast;
   siteLabel.textContent = activeOrigin || message("popupSiteUnavailable");
@@ -130,6 +147,15 @@ autoThresholdInput.addEventListener("change", async () => {
   await api.storage.local.set({ autoThreshold: threshold });
   setStatus(message("popupAutoThresholdSet", autoThresholdInput.value));
 });
+
+for (const input of autoDirectionInputs) {
+  input.addEventListener("change", async () => {
+    if (!input.checked) return;
+    await api.storage.local.set({ autoDirection: input.value });
+    renderThresholdLabels(input.value);
+    setStatus(message(input.value === "light" ? "popupAutoDirectionLightSet" : "popupAutoDirectionDarkSet"));
+  });
+}
 
 invertImagesInput.addEventListener("change", async () => {
   await setSiteSetting("invertImages", invertImagesInput.checked);

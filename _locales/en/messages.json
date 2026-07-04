@@ -3,7 +3,7 @@
     "message": "Smart Dark Mode"
   },
   "extensionDescription": {
-    "message": "Automatically darkens mostly-light pages and lets you persist a per-site override."
+    "message": "Automatically inverts pages that don't match your preference — darken light pages or lighten dark pages — with per-site overrides."
   },
   "popupEnabledGlobally": {
     "message": "Enabled globally"
@@ -15,9 +15,35 @@
     "message": "Auto Mode"
   },
   "popupAutoModeDescription": {
-    "message": "Tune when automatic mode should invert a page."
+    "message": "Choose whether to darken light pages or lighten dark pages, and tune the threshold."
   },
-  "popupAutoThreshold": {
+  "popupAutoDirection": {
+    "message": "Automatic direction"
+  },
+  "popupAutoDirectionDark": {
+    "message": "Dark"
+  },
+  "popupAutoDirectionLight": {
+    "message": "Light"
+  },
+  "popupAutoDirectionDarkHint": {
+    "message": "Darken light pages"
+  },
+  "popupAutoDirectionLightHint": {
+    "message": "Lighten dark pages"
+  },
+  "popupAutoDirectionDarkSet": {
+    "message": "Automatic direction set to Dark"
+  },
+  "popupAutoDirectionLightSet": {
+    "message": "Automatic direction set to Light"
+  },
+  "popupAutoThresholdDescriptionLight": {
+    "message": "Lower values only invert darker pages."
+  },
+  "popupAutoThresholdOnlyDark": {
+    "message": "Only very dark"
+  },  "popupAutoThreshold": {
     "message": "Inversion threshold"
   },
   "popupAutoThresholdDescription": {
@@ -55,14 +81,14 @@
   "popupLoading": {
     "message": "Loading..."
   },
-  "popupAutomaticDark": {
-    "message": "Automatic (Dark)"
+  "popupAutomatic": {
+    "message": "Automatic"
   },
   "popupForceInverted": {
-    "message": "Force inverted"
+    "message": "Always inverted"
   },
   "popupForceOriginal": {
-    "message": "Force original"
+    "message": "Always original"
   },
   "popupSiteUnavailable": {
     "message": "Site settings are unavailable on this page."
@@ -100,7 +126,7 @@
     "message": "Could not load settings."
   },
   "contextResetSite": {
-    "message": "Reset site to Automatic (Dark)"
+    "message": "Reset site to Automatic"
   },
   "actionAutomatic": {
     "message": "Smart Dark Mode: automatic"
@@ -109,10 +135,10 @@
     "message": "Smart Dark Mode: globally disabled"
   },
   "actionForcedInverted": {
-    "message": "Smart Dark Mode: forced inverted for this site"
+    "message": "Smart Dark Mode: always inverted for this site"
   },
   "actionForcedOriginal": {
-    "message": "Smart Dark Mode: forced original for this site"
+    "message": "Smart Dark Mode: always original for this site"
   },
   "actionAutomaticInverted": {
     "message": "Smart Dark Mode: automatic, inverted this page"

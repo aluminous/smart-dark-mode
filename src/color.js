@@ -38,6 +38,30 @@
     return clamp(parseFloat(part), 0, 1);
   }
 
+  function parseHue(part) {
+    part = part.trim();
+    let value;
+    if (part.endsWith("deg")) value = parseFloat(part);
+    else if (part.endsWith("grad")) value = (parseFloat(part) * 360) / 400;
+    else if (part.endsWith("rad")) value = (parseFloat(part) * 180) / Math.PI;
+    else if (part.endsWith("turn")) value = parseFloat(part) * 360;
+    else value = parseFloat(part);
+    if (!Number.isFinite(value)) return 0;
+    return ((value % 360) + 360) % 360;
+  }
+
+  function parseChannelPercent(part) {
+    part = part.trim();
+    const value = part.endsWith("%") ? parseFloat(part) / 100 : parseFloat(part);
+    return clamp(value, 0, 1);
+  }
+
+  function splitComponents(body) {
+    return body.includes(",")
+      ? body.split(",").map((p) => p.trim())
+      : body.split(/\s+/).filter(Boolean);
+  }
+
   function parseColor(input) {
     if (!input || typeof input !== "string") return null;
     const value = input.trim().toLowerCase();
@@ -75,7 +99,7 @@
         body = parts[0].trim();
         alpha = parseAlpha(parts[1]);
       }
-      const pieces = body.includes(",") ? body.split(",").map((p) => p.trim()) : body.split(/\s+/);
+      const pieces = splitComponents(body);
       if (pieces.length >= 3) {
         return {
           r: parseRgbPart(pieces[0]),
@@ -83,6 +107,47 @@
           b: parseRgbPart(pieces[2]),
           a: alpha ?? parseAlpha(pieces[3])
         };
+      }
+    }
+
+    match = value.match(/^hsla?\((.*)\)$/i);
+    if (match) {
+      let body = match[1].trim();
+      let alpha;
+      if (body.includes("/")) {
+        const parts = body.split("/");
+        body = parts[0].trim();
+        alpha = parseAlpha(parts[1]);
+      }
+      const pieces = splitComponents(body);
+      if (pieces.length >= 3) {
+        const h = parseHue(pieces[0]) / 360;
+        const s = parseChannelPercent(pieces[1]);
+        const l = parseChannelPercent(pieces[2]);
+        const rgb = hslToRgb(h, s, l);
+        return { r: rgb.r, g: rgb.g, b: rgb.b, a: alpha ?? parseAlpha(pieces[3]) };
+      }
+    }
+
+    match = value.match(/^oklch\((.*)\)$/i);
+    if (match) {
+      let body = match[1].trim();
+      let alpha;
+      if (body.includes("/")) {
+        const parts = body.split("/");
+        body = parts[0].trim();
+        alpha = parseAlpha(parts[1]);
+      }
+      const pieces = splitComponents(body);
+      if (pieces.length >= 3) {
+        const lightnessPart = pieces[0].trim();
+        const lightness = lightnessPart.endsWith("%")
+          ? parseFloat(lightnessPart) / 100
+          : parseFloat(lightnessPart);
+        const chroma = parseFloat(pieces[1]);
+        const hue = parseHue(pieces[2]);
+        const rgb = oklchToSrgb(lightness, chroma, hue);
+        return { r: rgb.r, g: rgb.g, b: rgb.b, a: alpha ?? parseAlpha(pieces[3]) };
       }
     }
 
@@ -143,19 +208,33 @@
     return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
   }
 
-  function invertLightness(color) {
-    const hsl = rgbToHsl(color.r, color.g, color.b);
-    const rgb = hslToRgb(hsl.h, hsl.s, 1 - hsl.l);
-    return { ...rgb, a: color.a };
+  function srgbEncode(channel) {
+    if (channel < 0) channel = 0;
+    return channel >= 0.0031308 ? 1.055 * Math.pow(channel, 1 / 2.4) - 0.055 : 12.92 * channel;
   }
 
-  function formatColor(color) {
-    const r = clamp(Math.round(color.r), 0, 255);
-    const g = clamp(Math.round(color.g), 0, 255);
-    const b = clamp(Math.round(color.b), 0, 255);
-    const a = clamp(color.a ?? 1, 0, 1);
-    if (a < 1) return `rgba(${r}, ${g}, ${b}, ${Number(a.toFixed(3))})`;
-    return `rgb(${r}, ${g}, ${b})`;
+  function oklchToSrgb(lightness, chroma, hue) {
+    const hRad = (hue * Math.PI) / 180;
+    const a = chroma * Math.cos(hRad);
+    const b = chroma * Math.sin(hRad);
+
+    const l_ = lightness + 0.3963377774 * a + 0.2158037573 * b;
+    const m_ = lightness - 0.1055613458 * a - 0.0638541728 * b;
+    const s_ = lightness - 0.0894841775 * a - 1.2914855480 * b;
+
+    const l = l_ * l_ * l_;
+    const m = m_ * m_ * m_;
+    const s = s_ * s_ * s_;
+
+    const r = srgbEncode(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s);
+    const g = srgbEncode(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s);
+    const bOut = srgbEncode(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+
+    return {
+      r: clamp(Math.round(r * 255), 0, 255),
+      g: clamp(Math.round(g * 255), 0, 255),
+      b: clamp(Math.round(bOut * 255), 0, 255)
+    };
   }
 
   function luminance(color) {
@@ -179,8 +258,6 @@
 
   globalThis.AutoDarkColor = {
     parseColor,
-    invertLightness,
-    formatColor,
     luminance,
     composite
   };

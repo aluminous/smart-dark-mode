@@ -50,6 +50,7 @@
         "<all_urls>"
       ],
       "js": [
+        "src/config.js",
         "src/color.js",
         "src/content.js"
       ],

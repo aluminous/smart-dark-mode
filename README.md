@@ -36,11 +36,12 @@ npm run run:firefox
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
 - The popup keeps the global enable/disable control separate from Auto Mode and current-site controls.
+- Auto Mode chooses an automatic direction: darken mostly-light pages (Dark) or lighten mostly-dark pages (Light).
 - Auto Mode includes a threshold slider for choosing how bright a page must be before automatic inversion applies.
 - Per-site controls choose whether images/media are restored to original colors or inverted with the page.
 - Per-site controls can enable a slight brightness/contrast boost while pages are inverted.
-- Per-site controls can set the current site to Automatic (Dark), Force inverted, or Force original.
-- Right-click the toolbar button and choose **Reset site to Automatic (Dark)** to remove the site override.
+- Per-site controls can set the current site to Automatic, Always inverted, or Always original.
+- Right-click the toolbar button and choose **Reset site to Automatic** to remove the site override.
 
 ## Manifests and packaging
 
@@ -112,12 +113,14 @@ npm run validate
 npm run lint:firefox
 ```
 
-Manual fixtures are in `test-fixtures/`:
+Manual fixtures are in `test-fixtures/` (described for the default Dark direction):
 
 - `light.html` should darken automatically.
 - `dark.html` should remain unchanged automatically.
 - `dynamic.html` should darken new content while active.
 - `mixed-media.html` should leave media elements visually unchanged.
+
+Switch the Auto Mode direction to Light to verify the inverse: `dark.html` lightens automatically and `light.html` stays unchanged.
 
 ## Known limitations
 
