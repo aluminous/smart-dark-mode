@@ -33,6 +33,7 @@ npm run run:firefox
 - The extension runs at `document_start` and reuses the last same-origin inverted/original result to reduce navigation flicker before full detection completes.
 - If the page is mostly light, a root `invert(1) hue-rotate(180deg)` filter is applied to the page.
 - Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
+- Open shadow roots get a copy of the exception rule so media inside web components is restored too; roots are discovered at activation and watched for as the page changes.
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
 - The popup keeps the global enable/disable control separate from Auto Mode and current-site controls.
@@ -122,6 +123,7 @@ Manual fixtures are in `test-fixtures/` (described for the default Dark directio
 - `dark.html` should remain unchanged automatically.
 - `dynamic.html` should darken new content while active.
 - `mixed-media.html` should leave media elements visually unchanged.
+- `shadow-dom.html` should leave media inside open shadow roots visually unchanged, including a shadow root attached after load.
 
 Switch the Auto Mode direction to Light to verify the inverse: `dark.html` lightens automatically and `light.html` stays unchanged.
 

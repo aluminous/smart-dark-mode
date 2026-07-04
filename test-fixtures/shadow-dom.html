@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shadow DOM fixture</title>
+  <style>
+    body { margin: 2rem; font-family: system-ui, sans-serif; color: #202020; background: #fbfbfb; }
+    .panel { padding: 1rem; background: #fff4d8; border: 2px solid #d68a00; }
+  </style>
+</head>
+<body>
+  <h1>Shadow DOM media</h1>
+  <div class="panel">The page should darken, but every image below should keep its original colors — including the ones inside open shadow roots.</div>
+  <img alt="Light DOM sample" width="220" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Crect width='220' height='120' fill='%23ffcc33'/%3E%3Ccircle cx='70' cy='60' r='40' fill='%23006bd6'/%3E%3Crect x='120' y='25' width='70' height='70' fill='%23d60054'/%3E%3C/svg%3E">
+  <div id="static-host"></div>
+  <div id="dynamic-slot"></div>
+  <script>
+    const image = (label) => `
+      <p>${label}</p>
+      <img alt="${label}" width="220" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Crect width='220' height='120' fill='%23ffcc33'/%3E%3Ccircle cx='70' cy='60' r='40' fill='%23006bd6'/%3E%3Crect x='120' y='25' width='70' height='70' fill='%23d60054'/%3E%3C/svg%3E">
+    `;
+
+    const staticRoot = document.getElementById('static-host').attachShadow({ mode: 'open' });
+    staticRoot.innerHTML = `${image('Inside a shadow root at load')}<div id="nested-host"></div>`;
+
+    const nestedRoot = staticRoot.getElementById('nested-host').attachShadow({ mode: 'open' });
+    nestedRoot.innerHTML = image('Inside a nested shadow root');
+
+    setTimeout(() => {
+      const host = document.createElement('div');
+      document.getElementById('dynamic-slot').append(host);
+      const dynamicRoot = host.attachShadow({ mode: 'open' });
+      dynamicRoot.innerHTML = image('Inside a shadow root added after load');
+    }, 1000);
+  </script>
+</body>
+</html>

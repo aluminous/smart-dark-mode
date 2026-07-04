@@ -13,6 +13,9 @@
   const BRIGHTNESS_INVERSE_VAR = "--auto-dark-mode-brightness-inverse";
   const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
   const SHADOW_COLOR_VAR = "--auto-dark-mode-shadow-color";
+  const MEDIA_FILTER_VAR = "--auto-dark-mode-media-filter";
+  const SHADOW_STYLE_CLASS = "auto-dark-mode-shadow-style";
+  const SHADOW_SCAN_DELAY_MS = 150;
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
   const LAST_STATE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -170,6 +173,9 @@
     // to transparent (no shadow); updateRootSettings sets them when enabled.
     // Exception elements are counter-inverted so they keep their original look;
     // nested exceptions are excluded so they are not double-inverted.
+    // The counter-invert filter lives in a custom property because custom
+    // properties inherit across shadow boundaries, letting the per-shadow-root
+    // stylesheets reuse it.
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
         filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1)) contrast(var(${CONTRAST_VAR}, 1)) !important;
@@ -185,11 +191,87 @@
         color-scheme: dark !important;
       }
 
-      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) :is(${EXCEPTION_SELECTOR}):not(:is(${EXCEPTION_SELECTOR}) *) {
-        filter: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent)) !important;
+      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) {
+        ${MEDIA_FILTER_VAR}: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
       }
+
+      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) ${exceptionRule()}
     `;
     (document.head || document.documentElement).appendChild(style);
+  }
+
+  function exceptionRule() {
+    return `:is(${EXCEPTION_SELECTOR}):not(:is(${EXCEPTION_SELECTOR}) *) {
+        filter: var(${MEDIA_FILTER_VAR}, none) !important;
+      }`;
+  }
+
+  // Document-level selectors cannot reach into shadow trees, so each open
+  // shadow root gets its own copy of the exception rule. The rule stays inert
+  // until the inherited media filter var is set by the main stylesheet.
+  let shadowObserver = null;
+  let shadowScanTimer = null;
+  let pendingShadowScans = new Set();
+  let knownShadowRoots = new WeakSet();
+  const injectedShadowStyles = new Set();
+
+  function injectShadowStyle(root) {
+    if (knownShadowRoots.has(root)) return;
+    knownShadowRoots.add(root);
+    const style = document.createElement("style");
+    style.className = SHADOW_STYLE_CLASS;
+    style.textContent = exceptionRule();
+    root.appendChild(style);
+    injectedShadowStyles.add(style);
+    shadowObserver?.observe(root, { childList: true, subtree: true });
+    scanForShadowRoots(root);
+  }
+
+  function scanForShadowRoots(node) {
+    if (node instanceof Element && node.shadowRoot) injectShadowStyle(node.shadowRoot);
+    if (typeof node.querySelectorAll !== "function") return;
+    for (const element of node.querySelectorAll("*")) {
+      if (element.shadowRoot) injectShadowStyle(element.shadowRoot);
+    }
+  }
+
+  function processPendingShadowScans() {
+    shadowScanTimer = null;
+    const nodes = pendingShadowScans;
+    pendingShadowScans = new Set();
+    for (const node of nodes) {
+      if (node.isConnected) scanForShadowRoots(node);
+    }
+  }
+
+  function ensureShadowSupport() {
+    if (!shadowObserver) {
+      shadowObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node instanceof Element) pendingShadowScans.add(node);
+          }
+        }
+        if (pendingShadowScans.size && shadowScanTimer === null) {
+          shadowScanTimer = window.setTimeout(processPendingShadowScans, SHADOW_SCAN_DELAY_MS);
+        }
+      });
+      shadowObserver.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    scanForShadowRoots(document);
+  }
+
+  function teardownShadowSupport() {
+    shadowObserver?.disconnect();
+    shadowObserver = null;
+    if (shadowScanTimer !== null) {
+      window.clearTimeout(shadowScanTimer);
+      shadowScanTimer = null;
+    }
+    pendingShadowScans = new Set();
+    for (const style of injectedShadowStyles) style.remove();
+    injectedShadowStyles.clear();
+    knownShadowRoots = new WeakSet();
   }
 
   function updateRootSettings() {
@@ -220,6 +302,7 @@
   function applyInversion() {
     active = true;
     ensureGlobalStyle();
+    ensureShadowSupport();
     updateRootSettings();
     document.documentElement.setAttribute(ROOT_ATTR, "active");
   }
@@ -251,6 +334,7 @@
     root.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
     root.style.removeProperty(CONTRAST_INVERSE_VAR);
     removeGlobalStyle();
+    teardownShadowSupport();
   }
 
   function currentState() {
