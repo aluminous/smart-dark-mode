@@ -299,3 +299,13 @@ input[type="radio"] {
 .disabled {
   opacity: 0.52;
 }
+
+.inactive-setting {
+  opacity: 0.46;
+  filter: grayscale(0.35);
+}
+
+.inactive-setting input,
+.inactive-setting output {
+  opacity: 0.72;
+}

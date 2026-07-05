@@ -106,6 +106,29 @@ function renderImageShadowControl(siteEnabled = true) {
   imageShadowStrengthInput.disabled = !enabled || !imageShadowInput.checked;
 }
 
+function setInversionOnlyControlsActive(active) {
+  const controls = [
+    invertImagesInput.closest(".setting-row"),
+    imageShadowInput.closest(".setting-row"),
+    imageShadowControls,
+    customCorrectionInput.closest(".setting-row"),
+    customCorrectionControls
+  ];
+  for (const control of controls) {
+    control?.classList.toggle("inactive-setting", !active);
+  }
+}
+
+async function getCurrentTabState() {
+  if (!activeTab?.id || !activeOrigin) return null;
+  try {
+    return await api.tabs.sendMessage(activeTab.id, { type: "autoDarkMode:getState" });
+  } catch (_error) {
+    // The content script is not available on this page.
+    return null;
+  }
+}
+
 async function getSettings() {
   const result = await api.storage.local.get(["globalEnabled", "autoThreshold", "autoDirection", "siteOverrides", "siteSettings"]);
   return {
@@ -171,18 +194,19 @@ function setSiteControlsEnabled(enabled) {
   document.querySelector(".site-panel").classList.toggle("disabled", !enabled);
 }
 
-async function renderAutoStatus() {
+async function refreshCurrentPageState() {
+  const state = await getCurrentTabState();
+  setInversionOnlyControlsActive(Boolean(state?.active));
+  return state;
+}
+
+async function renderAutoStatus(state = null) {
   const selectedMode = siteModeInputs.find((input) => input.checked)?.value;
   if (!activeTab?.id || !activeOrigin || !globalEnabledInput.checked || selectedMode !== "auto") {
     autoStatus.hidden = true;
     return;
   }
-  let state = null;
-  try {
-    state = await api.tabs.sendMessage(activeTab.id, { type: "autoDarkMode:getState" });
-  } catch (_error) {
-    // The content script is not available on this page.
-  }
+  state ||= await getCurrentTabState();
   if (!state) {
     autoStatus.hidden = true;
     return;
@@ -216,13 +240,15 @@ async function render() {
   const siteMode = activeOrigin ? Config.normalizeOverride(settings.siteOverrides[activeOrigin]) : "auto";
   for (const input of siteModeInputs) input.checked = input.value === siteMode;
   setSiteControlsEnabled(Boolean(activeOrigin));
-  await renderAutoStatus();
+  const state = await refreshCurrentPageState();
+  await renderAutoStatus(state);
 }
 
 globalEnabledInput.addEventListener("change", async () => {
   await api.storage.local.set({ globalEnabled: globalEnabledInput.checked });
   setStatus(message(globalEnabledInput.checked ? "popupEnabledEverywhere" : "popupDisabledEverywhere"));
-  renderAutoStatus();
+  const state = await refreshCurrentPageState();
+  renderAutoStatus(state);
 });
 
 const saveThresholdLive = throttle(() => {
@@ -314,14 +340,18 @@ for (const input of siteModeInputs) {
     if (!input.checked || !activeOrigin) return;
     await setSiteOverride(input.value);
     setStatus(input.value === "auto" ? message("popupSiteAutomatic") : message("popupSiteSet", input.value));
-    renderAutoStatus();
+    const state = await refreshCurrentPageState();
+    renderAutoStatus(state);
   });
 }
 
-api.storage.onChanged.addListener((changes, areaName) => {
+api.storage.onChanged.addListener(async (changes, areaName) => {
   // The content script re-evaluates and records its result; refresh the
   // detection status line once that lands.
-  if (areaName === "local" && changes.siteLastStates) renderAutoStatus();
+  if (areaName === "local" && changes.siteLastStates) {
+    const state = await refreshCurrentPageState();
+    renderAutoStatus(state);
+  }
 });
 
 applyLocalization();
