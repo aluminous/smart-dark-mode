@@ -11,6 +11,7 @@ const autoThresholdLeftLabel = document.getElementById("auto-threshold-left-labe
 const autoThresholdRightLabel = document.getElementById("auto-threshold-right-label");
 const autoDirectionInputs = Array.from(document.querySelectorAll("input[name='auto-direction']"));
 const invertImagesInput = document.getElementById("invert-images");
+const invertCanvasesInput = document.getElementById("invert-canvases");
 const imageShadowInput = document.getElementById("image-shadow");
 const imageShadowControls = document.getElementById("image-shadow-controls");
 const imageShadowStrengthInput = document.getElementById("image-shadow-strength");
@@ -21,6 +22,9 @@ const customBrightnessInput = document.getElementById("custom-brightness");
 const customBrightnessValue = document.getElementById("custom-brightness-value");
 const customContrastInput = document.getElementById("custom-contrast");
 const customContrastValue = document.getElementById("custom-contrast-value");
+const siteRulesList = document.getElementById("site-rules-list");
+const siteRulesEmpty = document.getElementById("site-rules-empty");
+const pickElementButton = document.getElementById("pick-element");
 const siteLabel = document.getElementById("site-label");
 const autoStatus = document.getElementById("auto-status");
 const status = document.getElementById("status");
@@ -39,6 +43,7 @@ customContrastInput.max = String(Math.round(Config.CORRECTION_MAX * 100));
 
 let activeTab = null;
 let activeOrigin = null;
+let currentSiteSettings = Config.normalizeSiteSettings(null);
 
 function throttle(fn, intervalMs) {
   let timer = null;
@@ -109,14 +114,110 @@ function renderImageShadowControl(siteEnabled = true) {
 function setInversionOnlyControlsActive(active) {
   const controls = [
     invertImagesInput.closest(".setting-row"),
+    invertCanvasesInput.closest(".setting-row"),
     imageShadowInput.closest(".setting-row"),
     imageShadowControls,
     customCorrectionInput.closest(".setting-row"),
-    customCorrectionControls
+    customCorrectionControls,
+    document.querySelector(".site-rules")
   ];
   for (const control of controls) {
     control?.classList.toggle("inactive-setting", !active);
   }
+}
+
+function sameRule(rule, action, selector) {
+  return rule.action === action && rule.selector === selector;
+}
+
+function ruleBadge(text) {
+  const badge = document.createElement("span");
+  badge.className = "rule-badge";
+  badge.textContent = text;
+  return badge;
+}
+
+function ruleCopy(label, rule, badgeTexts) {
+  const copy = document.createElement("div");
+  copy.className = "rule-copy";
+  const heading = document.createElement("div");
+  heading.className = "rule-heading";
+  const name = document.createElement("span");
+  name.className = "rule-name";
+  name.textContent = label;
+  heading.appendChild(name);
+  for (const badgeText of badgeTexts) heading.appendChild(ruleBadge(badgeText));
+  copy.appendChild(heading);
+  const code = document.createElement("code");
+  code.textContent = rule.selector;
+  code.title = rule.selector;
+  copy.appendChild(code);
+  return copy;
+}
+
+function renderSiteRules(settings = currentSiteSettings) {
+  siteRulesList.textContent = "";
+  const predefinedRules = Config.predefinedRulesForUrl(activeTab?.url);
+  const disabledRules = new Set(settings.disabledPredefinedRules);
+
+  for (const rule of predefinedRules) {
+    const item = document.createElement("li");
+    item.className = "predefined-rule";
+    item.appendChild(ruleCopy(
+      message(rule.labelMessage),
+      rule,
+      [
+        message("popupBuiltInRule"),
+        message(rule.action === Config.RULE_ACTION_INVERT ? "popupRuleInvert" : "popupRulePreserve")
+      ]
+    ));
+    const toggle = document.createElement("input");
+    toggle.type = "checkbox";
+    toggle.className = "site-rule-toggle";
+    toggle.checked = !disabledRules.has(rule.id);
+    toggle.disabled = !activeOrigin;
+    toggle.setAttribute("aria-label", message("popupTogglePredefinedRule", message(rule.labelMessage)));
+    toggle.addEventListener("change", async () => {
+      const disabled = new Set(currentSiteSettings.disabledPredefinedRules);
+      if (toggle.checked) disabled.delete(rule.id);
+      else disabled.add(rule.id);
+      await updateSiteSettings({ disabledPredefinedRules: [...disabled] });
+      setStatus(message(toggle.checked ? "popupPredefinedRuleEnabled" : "popupPredefinedRuleDisabled"));
+    });
+    item.appendChild(toggle);
+    siteRulesList.appendChild(item);
+  }
+
+  for (const rule of settings.customRules) {
+    const item = document.createElement("li");
+    item.appendChild(ruleCopy(
+      message("popupCustomRule"),
+      rule,
+      [message(rule.action === Config.RULE_ACTION_INVERT ? "popupRuleInvert" : "popupRulePreserve")]
+    ));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove-rule";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", message("popupRemoveRule"));
+    remove.disabled = !activeOrigin;
+    remove.addEventListener("click", async () => {
+      const remaining = currentSiteSettings.customRules.filter((entry) => !sameRule(entry, rule.action, rule.selector));
+      await updateSiteSettings({ customRules: remaining });
+      setStatus(message("popupRuleRemoved"));
+    });
+    item.appendChild(remove);
+    siteRulesList.appendChild(item);
+  }
+  siteRulesEmpty.hidden = predefinedRules.length + settings.customRules.length > 0;
+}
+
+function applySiteRuleSettings(settings) {
+  currentSiteSettings = Config.normalizeSiteSettings(settings);
+  invertCanvasesInput.checked = currentSiteSettings.customRules.some((rule) =>
+    sameRule(rule, Config.RULE_ACTION_INVERT, "canvas")
+  );
+  renderSiteRules(currentSiteSettings);
 }
 
 async function getCurrentTabState() {
@@ -149,31 +250,17 @@ async function setSiteOverride(mode) {
   await api.storage.local.set({ siteOverrides });
 }
 
-function normalizeSiteSettingsForStorage(settings) {
-  const next = { ...settings };
-  next.invertImages = next.invertImages === true;
-  next.imageShadow = next.imageShadow === true;
-  if (next.imageShadow) next.imageShadowStrength = Config.normalizeImageShadowStrength(next.imageShadowStrength);
-  else delete next.imageShadowStrength;
-  next.customCorrection = next.customCorrection === true;
-  if (next.customCorrection) {
-    next.customBrightness = Config.normalizeBrightness(next.customBrightness);
-    next.customContrast = Config.normalizeContrast(next.customContrast);
-  } else {
-    delete next.customBrightness;
-    delete next.customContrast;
-  }
-  return next;
-}
-
 async function updateSiteSettings(updates) {
-  if (!activeOrigin) return;
+  if (!activeOrigin) return currentSiteSettings;
   const result = await api.storage.local.get("siteSettings");
   const siteSettings = result.siteSettings || {};
-  const settings = normalizeSiteSettingsForStorage({ ...(siteSettings[activeOrigin] || {}), ...updates });
-  if (!settings.invertImages && !settings.imageShadow && !settings.customCorrection) delete siteSettings[activeOrigin];
-  else siteSettings[activeOrigin] = settings;
+  const existing = Config.normalizeSiteSettings(siteSettings[activeOrigin]);
+  const stored = Config.siteSettingsForStorage({ ...existing, ...updates });
+  if (Object.keys(stored).length) siteSettings[activeOrigin] = stored;
+  else delete siteSettings[activeOrigin];
   await api.storage.local.set({ siteSettings });
+  applySiteRuleSettings(stored);
+  return currentSiteSettings;
 }
 
 function setStatus(text) {
@@ -187,10 +274,13 @@ function setStatus(text) {
 function setSiteControlsEnabled(enabled) {
   for (const input of siteModeInputs) input.disabled = !enabled;
   invertImagesInput.disabled = !enabled;
+  invertCanvasesInput.disabled = !enabled;
   renderImageShadowControl(enabled);
   customCorrectionInput.disabled = !enabled;
   customBrightnessInput.disabled = !enabled || !customCorrectionInput.checked;
   customContrastInput.disabled = !enabled || !customCorrectionInput.checked;
+  pickElementButton.disabled = !enabled;
+  for (const control of siteRulesList.querySelectorAll("button, input")) control.disabled = !enabled;
   document.querySelector(".site-panel").classList.toggle("disabled", !enabled);
 }
 
@@ -235,6 +325,7 @@ async function render() {
   customContrastInput.value = String(Math.round(settings.customContrast * 100));
   updateCorrectionLabels();
   renderCorrectionControls(settings.customCorrection);
+  applySiteRuleSettings(settings);
   siteLabel.textContent = activeOrigin || message("popupSiteUnavailable");
 
   const siteMode = activeOrigin ? Config.normalizeOverride(settings.siteOverrides[activeOrigin]) : "auto";
@@ -277,6 +368,17 @@ invertImagesInput.addEventListener("change", async () => {
   renderImageShadowControl(Boolean(activeOrigin));
   await updateSiteSettings({ invertImages: invertImagesInput.checked });
   setStatus(message(invertImagesInput.checked ? "popupImagesInverted" : "popupImagesRestored"));
+});
+
+invertCanvasesInput.addEventListener("change", async () => {
+  const remaining = currentSiteSettings.customRules.filter((rule) =>
+    !sameRule(rule, Config.RULE_ACTION_INVERT, "canvas")
+  );
+  if (invertCanvasesInput.checked) {
+    remaining.push({ action: Config.RULE_ACTION_INVERT, selector: "canvas" });
+  }
+  await updateSiteSettings({ customRules: remaining });
+  setStatus(message(invertCanvasesInput.checked ? "popupCanvasesInverted" : "popupCanvasesAutomatic"));
 });
 
 imageShadowInput.addEventListener("change", async () => {
@@ -345,12 +447,28 @@ for (const input of siteModeInputs) {
   });
 }
 
+pickElementButton.addEventListener("click", async () => {
+  if (!activeTab?.id || !activeOrigin) return;
+  try {
+    await api.tabs.sendMessage(activeTab.id, { type: "autoDarkMode:startPicker" });
+    window.close();
+  } catch (_error) {
+    // The content script is not available on this page.
+    setStatus(message("popupPickerUnavailable"));
+  }
+});
+
 api.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== "local") return;
   // The content script re-evaluates and records its result; refresh the
   // detection status line once that lands.
-  if (areaName === "local" && changes.siteLastStates) {
+  if (changes.siteLastStates) {
     const state = await refreshCurrentPageState();
     renderAutoStatus(state);
+  }
+  if (changes.siteSettings && activeOrigin) {
+    const settings = Config.normalizeSiteSettings(changes.siteSettings.newValue?.[activeOrigin]);
+    applySiteRuleSettings(settings);
   }
 });
 

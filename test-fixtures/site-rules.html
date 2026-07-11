@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Site rules fixture</title>
+  <style>
+    body { margin: 2rem; font-family: system-ui, sans-serif; color: #202020; background: #fbfbfb; }
+    .intro { padding: 1rem; background: #fff4d8; border: 2px solid #d68a00; margin-bottom: 1.5rem; }
+    #brand-chart {
+      width: 320px; height: 140px; padding: 1rem;
+      background: linear-gradient(120deg, #ff5e3a, #ffcc33, #00b06b, #006bd6);
+      color: #fff; font-weight: 700; border-radius: 12px;
+    }
+    .card-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
+    .promo-card {
+      width: 180px; padding: 1rem; border-radius: 10px;
+      background: #e8f4ff; border: 2px solid #006bd6; color: #003a75;
+    }
+    .promo-card .swatch { height: 40px; background: linear-gradient(90deg, #d60054, #ffcc33); border-radius: 6px; }
+    .deep { margin-top: 1.5rem; padding: 1rem; background: #f2eaff; }
+    header.sticky {
+      position: sticky; top: 0; padding: 0.6rem 1rem; margin: -2rem -2rem 1.5rem;
+      background: #1f2937; color: #ffcc33; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <header class="sticky">Sticky header (pick me to test fixed/sticky elements)</header>
+  <h1>Site rules</h1>
+  <div class="intro">
+    The page should darken. Use the popup's "Pick element" button to exclude the
+    colorful blocks below and confirm they return to their original colors.
+  </div>
+
+  <div id="brand-chart" class="chart colorful">Chart-like block with id + classes</div>
+
+  <div class="card-row">
+    <div class="promo-card"><div class="swatch"></div><p>Card one</p></div>
+    <div class="promo-card"><div class="swatch"></div><p>Card two</p>
+      <img alt="Nested media" width="140" height="60" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='60'%3E%3Crect width='140' height='60' fill='%23ffcc33'/%3E%3Ccircle cx='40' cy='30' r='20' fill='%23006bd6'/%3E%3C/svg%3E">
+    </div>
+    <div class="promo-card"><div class="swatch"></div><p>Card three</p></div>
+  </div>
+
+  <div class="deep">
+    <div>
+      <div>
+        <span>Deeply nested element with no id or class (tests the nth-of-type fallback)</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="shadow-host-area"></div>
+  <script>
+    const root = document.getElementById('shadow-host-area').attachShadow({ mode: 'open' });
+    root.innerHTML = `
+      <div style="margin-top: 1.5rem; padding: 1rem; background: #ffe1ec; border: 2px solid #d60054;">
+        Open shadow root widget — picking inside should retarget to the host.
+      </div>
+    `;
+  </script>
+</body>
+</html>

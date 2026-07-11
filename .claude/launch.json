@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shadow-harness",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8643", "--directory", "/private/tmp/claude-501/-Users-austin-dev-extension-auto-dark-mode/0ba2c3c8-18ec-467e-a913-123c5066db2b/scratchpad/shadow-harness"],
+      "port": 8643
+    }
+  ]
+}

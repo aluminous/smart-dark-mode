@@ -8,12 +8,14 @@
   const ROOT_ATTR = "data-auto-dark-mode";
   const DIRECTION_ATTR = "data-auto-dark-mode-direction";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
+  const ROOT_BACKGROUND_ATTR = "data-auto-dark-mode-root-background";
   const BRIGHTNESS_VAR = "--auto-dark-mode-brightness";
   const CONTRAST_VAR = "--auto-dark-mode-contrast";
   const BRIGHTNESS_INVERSE_VAR = "--auto-dark-mode-brightness-inverse";
   const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
   const SHADOW_COLOR_VAR = "--auto-dark-mode-shadow-color";
   const MEDIA_FILTER_VAR = "--auto-dark-mode-media-filter";
+  const FORCED_FILTER_VAR = "--auto-dark-mode-forced-filter";
   const SHADOW_STYLE_CLASS = "auto-dark-mode-shadow-style";
   const SHADOW_SCAN_DELAY_MS = 150;
   const SAMPLE_COLUMNS = 7;
@@ -21,7 +23,7 @@
   const LAST_STATE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const LAST_STATE_REFRESH_MS = 24 * 60 * 60 * 1000;
   const LAST_STATE_MAX_ENTRIES = 200;
-  const EXCEPTION_SELECTOR = [
+  const DEFAULT_EXCEPTION_SELECTORS = [
     "img",
     "video",
     "canvas",
@@ -30,7 +32,7 @@
     "embed",
     "[role='img']",
     "[data-auto-dark-mode-exempt]"
-  ].join(", ");
+  ];
 
   let active = false;
   let currentOverride = "auto";
@@ -41,6 +43,8 @@
   let customCorrection = false;
   let customBrightness = Config.DEFAULT_BRIGHTNESS;
   let customContrast = Config.DEFAULT_CONTRAST;
+  let customRules = [];
+  let disabledPredefinedRules = [];
   let lightThreshold = Config.DEFAULT_LIGHT_THRESHOLD;
   let autoDirection = Config.DEFAULT_AUTO_DIRECTION;
   let automaticWouldInvert = false;
@@ -81,6 +85,42 @@
     customCorrection = state.customCorrection;
     customBrightness = state.customBrightness;
     customContrast = state.customContrast;
+    customRules = state.customRules;
+    disabledPredefinedRules = state.disabledPredefinedRules;
+  }
+
+  // User-provided selectors may be malformed; :is() would forgive them but
+  // closest()/querySelector() throw, so drop invalid ones up front.
+  function validRules(rules) {
+    const probe = document.createDocumentFragment();
+    return rules.filter((rule) => {
+      try {
+        probe.querySelector(rule.selector);
+        return true;
+      } catch (_error) {
+        return false;
+      }
+    });
+  }
+
+  function uniqueSelectors(selectors) {
+    return [...new Set(selectors)];
+  }
+
+  function currentRuleSelectors() {
+    const rules = validRules(Config.effectiveRulesForUrl(location.href, {
+      customRules,
+      disabledPredefinedRules
+    }));
+    return {
+      preserve: uniqueSelectors([
+        ...DEFAULT_EXCEPTION_SELECTORS,
+        ...rules.filter((rule) => rule.action === Config.RULE_ACTION_PRESERVE).map((rule) => rule.selector)
+      ]).join(", "),
+      invert: uniqueSelectors(
+        rules.filter((rule) => rule.action === Config.RULE_ACTION_INVERT).map((rule) => rule.selector)
+      ).join(", ")
+    };
   }
 
   async function rememberSiteState() {
@@ -145,12 +185,13 @@
 
     let total = 0;
     let count = 0;
+    const exceptionSelector = currentRuleSelectors().preserve;
     for (let row = 0; row < SAMPLE_ROWS; row += 1) {
       for (let column = 0; column < SAMPLE_COLUMNS; column += 1) {
         const x = Math.round((width * (column + 0.5)) / SAMPLE_COLUMNS);
         const y = Math.round((height * (row + 0.5)) / SAMPLE_ROWS);
         const elements = document.elementsFromPoint(Math.min(x, width - 1), Math.min(y, height - 1));
-        const element = elements.find((candidate) => elementVisible(candidate) && !candidate.closest(EXCEPTION_SELECTOR));
+        const element = elements.find((candidate) => elementVisible(candidate) && !candidate.closest(exceptionSelector));
         if (!element) continue;
         const background = effectiveBackground(element);
         total += Color.luminance(background);
@@ -165,9 +206,14 @@
     return total / count >= lightThreshold;
   }
 
+  let appliedRuleSignature = null;
+
   function ensureGlobalStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
+    const selectors = currentRuleSelectors();
+    const signature = `${selectors.preserve}\n${selectors.invert}`;
+    const existing = document.getElementById(STYLE_ID);
+    if (existing && appliedRuleSignature === signature) return;
+    const style = existing || document.createElement("style");
     style.id = STYLE_ID;
     // Brightness/contrast vars default to 1 (no correction) and the shadow color
     // to transparent (no shadow); updateRootSettings sets them when enabled.
@@ -181,29 +227,45 @@
         filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1)) contrast(var(${CONTRAST_VAR}, 1)) !important;
       }
 
+      html[${ROOT_ATTR}="active"][${ROOT_BACKGROUND_ATTR}="fallback"][${DIRECTION_ATTR}="dark"] {
+        background-color: #fff !important;
+      }
+
       html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="dark"] {
-        background: #eee !important;
         color-scheme: light !important;
       }
 
+      html[${ROOT_ATTR}="active"][${ROOT_BACKGROUND_ATTR}="fallback"][${DIRECTION_ATTR}="light"] {
+        background-color: #000 !important;
+      }
+
       html[${ROOT_ATTR}="active"][${DIRECTION_ATTR}="light"] {
-        background: #111 !important;
         color-scheme: dark !important;
       }
 
       html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) {
         ${MEDIA_FILTER_VAR}: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
+        ${FORCED_FILTER_VAR}: none;
       }
 
-      html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) ${exceptionRule()}
+      ${siteRuleCss(selectors, `html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"])`)}
     `;
-    (document.head || document.documentElement).appendChild(style);
+    if (!existing) (document.head || document.documentElement).appendChild(style);
+    appliedRuleSignature = signature;
+    refreshShadowStyles(selectors);
   }
 
-  function exceptionRule() {
-    return `:is(${EXCEPTION_SELECTOR}):not(:is(${EXCEPTION_SELECTOR}) *) {
-        filter: var(${MEDIA_FILTER_VAR}, none) !important;
+  function siteRuleCss(selectors = currentRuleSelectors(), scope = "") {
+    const prefix = scope ? `${scope} ` : "";
+    let css = `${prefix}:where(${selectors.preserve}):not(:where(${selectors.preserve}) *) {
+        filter: var(${MEDIA_FILTER_VAR}) !important;
       }`;
+    if (selectors.invert) {
+      css += `\n${prefix}:where(${selectors.invert}) {
+        filter: var(${FORCED_FILTER_VAR}) !important;
+      }`;
+    }
+    return css;
   }
 
   // Document-level selectors cannot reach into shadow trees, so each open
@@ -220,11 +282,22 @@
     knownShadowRoots.add(root);
     const style = document.createElement("style");
     style.className = SHADOW_STYLE_CLASS;
-    style.textContent = exceptionRule();
+    style.textContent = siteRuleCss();
     root.appendChild(style);
     injectedShadowStyles.add(style);
     shadowObserver?.observe(root, { childList: true, subtree: true });
     scanForShadowRoots(root);
+  }
+
+  function refreshShadowStyles(selectors) {
+    const rule = siteRuleCss(selectors);
+    for (const style of injectedShadowStyles) {
+      if (!style.isConnected) {
+        injectedShadowStyles.delete(style);
+        continue;
+      }
+      if (style.textContent !== rule) style.textContent = rule;
+    }
   }
 
   function scanForShadowRoots(node) {
@@ -274,10 +347,21 @@
     knownShadowRoots = new WeakSet();
   }
 
+  function siteDefinesRootBackground() {
+    const root = document.documentElement;
+    const wasActive = root.getAttribute(ROOT_ATTR) === "active";
+    if (wasActive) root.removeAttribute(ROOT_ATTR);
+    const background = Color.parseColor(getComputedStyle(root).backgroundColor);
+    if (wasActive) root.setAttribute(ROOT_ATTR, "active");
+    return Boolean(background && background.a > 0);
+  }
+
   function updateRootSettings() {
     const root = document.documentElement;
     root.setAttribute(DIRECTION_ATTR, autoDirection);
     root.setAttribute(INVERT_IMAGES_ATTR, String(invertImages));
+    if (siteDefinesRootBackground()) root.removeAttribute(ROOT_BACKGROUND_ATTR);
+    else root.setAttribute(ROOT_BACKGROUND_ATTR, "fallback");
     if (imageShadow) {
       // The shadow renders inside the counter-invert filter, so the root filter
       // inverts it again: black becomes a light glow on darkened pages.
@@ -328,6 +412,7 @@
     root.removeAttribute(ROOT_ATTR);
     root.removeAttribute(DIRECTION_ATTR);
     root.removeAttribute(INVERT_IMAGES_ATTR);
+    root.removeAttribute(ROOT_BACKGROUND_ATTR);
     root.style.removeProperty(SHADOW_COLOR_VAR);
     root.style.removeProperty(BRIGHTNESS_VAR);
     root.style.removeProperty(CONTRAST_VAR);
@@ -351,7 +436,10 @@
       imageShadowStrength,
       customCorrection,
       customBrightness,
-      customContrast
+      customContrast,
+      customRules,
+      disabledPredefinedRules,
+      effectiveRules: Config.effectiveRulesForUrl(location.href, { customRules, disabledPredefinedRules })
     };
   }
 

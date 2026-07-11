@@ -53,7 +53,8 @@
       "js": [
         "src/config.js",
         "src/color.js",
-        "src/content.js"
+        "src/content.js",
+        "src/picker.js"
       ],
       "run_at": "document_start"
     }

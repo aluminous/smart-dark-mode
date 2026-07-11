@@ -33,6 +33,7 @@ npm run run:firefox
 - The extension runs at `document_start` and reuses the last same-origin inverted/original result to reduce navigation flicker before full detection completes.
 - If the page is mostly light, a root `invert(1) hue-rotate(180deg)` filter is applied to the page.
 - Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
+- Shipped site rules invert document canvases on Google Sheets and Google Docs editor routes; matching built-in rules appear in the popup and can be disabled per site.
 - Open shadow roots get a copy of the exception rule so media inside web components is restored too; roots are discovered at activation and watched for as the page changes.
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
@@ -40,6 +41,8 @@ npm run run:firefox
 - Auto Mode chooses an automatic direction: darken mostly-light pages (Dark) or lighten mostly-dark pages (Light).
 - Auto Mode includes a threshold slider for choosing how bright a page must be before automatic inversion applies.
 - Per-site controls choose whether images/media are restored to original colors or inverted with the page.
+- Per-site controls can force canvases to invert with the page; when off, shipped compatibility rules decide automatically.
+- Built-in and user-created site rules share `preserve` and `invert` selector actions. The element picker includes broad tag choices such as `canvas` and can combine multiple choices into one custom `preserve` rule.
 - Per-site controls can add a direction-aware shadow around restored images and tune its strength for contrast.
 - Per-site controls can enable custom brightness and contrast sliders while pages are inverted.
 - Per-site controls can set the current site to Automatic, Always inverted, or Always original.

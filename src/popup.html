@@ -103,6 +103,14 @@
 
     <label class="setting-row">
       <span>
+        <strong data-i18n="popupInvertCanvases">Invert canvases</strong>
+        <small data-i18n="popupInvertCanvasesDescription">Always invert canvases with the page. Off uses automatic site rules.</small>
+      </span>
+      <input id="invert-canvases" type="checkbox">
+    </label>
+
+    <label class="setting-row">
+      <span>
         <strong data-i18n="popupImageShadow">Image shadow</strong>
         <small data-i18n="popupImageShadowDescription">Add a direction-aware shadow around restored images for contrast.</small>
       </span>
@@ -143,6 +151,20 @@
         <output id="custom-contrast-value" for="custom-contrast">108%</output>
       </label>
       <input id="custom-contrast" class="threshold-slider" type="range" step="1">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="site-rules">
+      <div class="setting-row">
+        <span>
+          <strong data-i18n="popupSiteRules">Site rules</strong>
+          <small data-i18n="popupSiteRulesDescription">Built-in compatibility rules and your custom element rules.</small>
+        </span>
+      </div>
+      <ul id="site-rules-list" class="site-rules-list"></ul>
+      <div id="site-rules-empty" class="site-rules-empty" data-i18n="popupNoSiteRules">No rules yet.</div>
+      <button id="pick-element" class="pick-element" type="button" data-i18n="popupPickElement">Pick element</button>
     </div>
   </section>
 

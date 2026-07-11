@@ -69,6 +69,18 @@
   "popupInvertImagesDescription": {
     "message": "Leave media inverted with the page instead of restoring original colors."
   },
+  "popupInvertCanvases": {
+    "message": "Invert canvases"
+  },
+  "popupInvertCanvasesDescription": {
+    "message": "Always invert canvases with the page. Off uses automatic site rules."
+  },
+  "popupCanvasesInverted": {
+    "message": "Canvases will invert with pages"
+  },
+  "popupCanvasesAutomatic": {
+    "message": "Canvas handling set to automatic"
+  },
   "popupCustomCorrection": {
     "message": "Custom brightness and contrast"
   },
@@ -178,6 +190,88 @@
   },
   "popupCouldNotLoad": {
     "message": "Could not load settings."
+  },
+  "popupSiteRules": {
+    "message": "Site rules"
+  },
+  "popupSiteRulesDescription": {
+    "message": "Built-in compatibility rules and your custom element rules."
+  },
+  "popupNoSiteRules": {
+    "message": "No rules for this page."
+  },
+  "popupCustomRule": {
+    "message": "Custom rule"
+  },
+  "popupBuiltInRule": {
+    "message": "Built-in"
+  },
+  "popupRuleInvert": {
+    "message": "Invert"
+  },
+  "popupRulePreserve": {
+    "message": "Preserve"
+  },
+  "popupTogglePredefinedRule": {
+    "message": "Enable $RULE$",
+    "placeholders": {
+      "rule": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupPredefinedRuleEnabled": {
+    "message": "Built-in rule enabled"
+  },
+  "popupPredefinedRuleDisabled": {
+    "message": "Built-in rule disabled"
+  },
+  "predefinedRuleGoogleDocsCanvas": {
+    "message": "Google Docs document canvas"
+  },
+  "predefinedRuleGoogleSheetsCanvas": {
+    "message": "Google Sheets grid canvas"
+  },
+  "popupPickElement": {
+    "message": "Pick element"
+  },
+  "popupPickerUnavailable": {
+    "message": "The picker is not available on this page."
+  },
+  "popupRemoveRule": {
+    "message": "Remove rule"
+  },
+  "popupRuleRemoved": {
+    "message": "Rule removed"
+  },
+  "pickerPrompt": {
+    "message": "Click an element to keep its original colors. Press Esc to cancel."
+  },
+  "pickerChooseSelector": {
+    "message": "Choose selectors"
+  },
+  "pickerHint": {
+    "message": "Select one or more selectors. Multiple choices match any of them in one rule. Hover to preview."
+  },
+  "pickerAddRule": {
+    "message": "Add rule"
+  },
+  "pickerMatchCount": {
+    "message": "$COUNT$ matching elements",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "pickerMatchCountOne": {
+    "message": "1 matching element"
+  },
+  "pickerCancel": {
+    "message": "Cancel"
+  },
+  "pickerRuleAdded": {
+    "message": "Rule added"
   },
   "contextResetSite": {
     "message": "Reset site to Automatic"
