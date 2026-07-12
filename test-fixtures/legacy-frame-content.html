@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Legacy frame content</title>
+</head>
+<body bgcolor="#ffffff" text="#202020" link="#003a75">
+  <font face="Arial">
+    <h2 id="title">Legacy frame</h2>
+    <table width="100%" cellpadding="8" border="1" bgcolor="#fef3c7">
+      <tr><td>Old-style application content</td></tr>
+    </table>
+  </font>
+  <script>
+    document.getElementById('title').textContent = location.hash === '#navigation'
+      ? 'Navigation frame'
+      : 'Workspace frame';
+  </script>
+</body>
+</html>

@@ -15,9 +15,11 @@
   const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
   const SHADOW_COLOR_VAR = "--auto-dark-mode-shadow-color";
   const MEDIA_FILTER_VAR = "--auto-dark-mode-media-filter";
+  const RULE_PRESERVE_FILTER_VAR = "--auto-dark-mode-rule-preserve-filter";
   const FORCED_FILTER_VAR = "--auto-dark-mode-forced-filter";
   const SHADOW_STYLE_CLASS = "auto-dark-mode-shadow-style";
   const SHADOW_SCAN_DELAY_MS = 150;
+  const SHADOW_RESCAN_DELAYS_MS = [750, 2500, 10000];
   const SAMPLE_COLUMNS = 7;
   const SAMPLE_ROWS = 7;
   const LAST_STATE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -107,7 +109,7 @@
     return [...new Set(selectors)];
   }
 
-  function currentRuleSelectors() {
+  function currentRuleState() {
     const rules = validRules(Config.effectiveRulesForUrl(location.href, {
       customRules,
       disabledPredefinedRules
@@ -117,9 +119,7 @@
         ...DEFAULT_EXCEPTION_SELECTORS,
         ...rules.filter((rule) => rule.action === Config.RULE_ACTION_PRESERVE).map((rule) => rule.selector)
       ]).join(", "),
-      invert: uniqueSelectors(
-        rules.filter((rule) => rule.action === Config.RULE_ACTION_INVERT).map((rule) => rule.selector)
-      ).join(", ")
+      rules
     };
   }
 
@@ -185,7 +185,7 @@
 
     let total = 0;
     let count = 0;
-    const exceptionSelector = currentRuleSelectors().preserve;
+    const exceptionSelector = currentRuleState().preserve;
     for (let row = 0; row < SAMPLE_ROWS; row += 1) {
       for (let column = 0; column < SAMPLE_COLUMNS; column += 1) {
         const x = Math.round((width * (column + 0.5)) / SAMPLE_COLUMNS);
@@ -209,8 +209,8 @@
   let appliedRuleSignature = null;
 
   function ensureGlobalStyle() {
-    const selectors = currentRuleSelectors();
-    const signature = `${selectors.preserve}\n${selectors.invert}`;
+    const ruleState = currentRuleState();
+    const signature = JSON.stringify(ruleState);
     const existing = document.getElementById(STYLE_ID);
     if (existing && appliedRuleSignature === signature) return;
     const style = existing || document.createElement("style");
@@ -225,6 +225,8 @@
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
         filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1)) contrast(var(${CONTRAST_VAR}, 1)) !important;
+        ${RULE_PRESERVE_FILTER_VAR}: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
+        ${FORCED_FILTER_VAR}: none;
       }
 
       html[${ROOT_ATTR}="active"][${ROOT_BACKGROUND_ATTR}="fallback"][${DIRECTION_ATTR}="dark"] {
@@ -244,25 +246,32 @@
       }
 
       html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"]) {
-        ${MEDIA_FILTER_VAR}: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
-        ${FORCED_FILTER_VAR}: none;
+        ${MEDIA_FILTER_VAR}: var(${RULE_PRESERVE_FILTER_VAR});
       }
 
-      ${siteRuleCss(selectors, `html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"])`)}
+      ${siteRuleCss(
+        ruleState,
+        `html[${ROOT_ATTR}="active"]`,
+        `html[${ROOT_ATTR}="active"]:not([${INVERT_IMAGES_ATTR}="true"])`
+      )}
     `;
     if (!existing) (document.head || document.documentElement).appendChild(style);
     appliedRuleSignature = signature;
-    refreshShadowStyles(selectors);
+    refreshShadowStyles(ruleState);
   }
 
-  function siteRuleCss(selectors = currentRuleSelectors(), scope = "") {
+  function siteRuleCss(ruleState = currentRuleState(), scope = "", defaultScope = scope) {
     const prefix = scope ? `${scope} ` : "";
-    let css = `${prefix}:where(${selectors.preserve}):not(:where(${selectors.preserve}) *) {
+    const defaultPrefix = defaultScope ? `${defaultScope} ` : "";
+    let css = `${defaultPrefix}:where(${ruleState.preserve}):not(:where(${ruleState.preserve}) *) {
         filter: var(${MEDIA_FILTER_VAR}) !important;
       }`;
-    if (selectors.invert) {
-      css += `\n${prefix}:where(${selectors.invert}) {
-        filter: var(${FORCED_FILTER_VAR}) !important;
+    for (const rule of ruleState.rules) {
+      const filterVar = rule.action === Config.RULE_ACTION_PRESERVE
+        ? RULE_PRESERVE_FILTER_VAR
+        : FORCED_FILTER_VAR;
+      css += `\n${prefix}:where(${rule.selector}) {
+        filter: var(${filterVar}) !important;
       }`;
     }
     return css;
@@ -273,6 +282,9 @@
   // until the inherited media filter var is set by the main stylesheet.
   let shadowObserver = null;
   let shadowScanTimer = null;
+  let shadowRescansScheduled = false;
+  const shadowRescanTimers = new Set();
+  const shadowIdleCallbacks = new Set();
   let pendingShadowScans = new Set();
   let knownShadowRoots = new WeakSet();
   const injectedShadowStyles = new Set();
@@ -289,8 +301,8 @@
     scanForShadowRoots(root);
   }
 
-  function refreshShadowStyles(selectors) {
-    const rule = siteRuleCss(selectors);
+  function refreshShadowStyles(ruleState) {
+    const rule = siteRuleCss(ruleState);
     for (const style of injectedShadowStyles) {
       if (!style.isConnected) {
         injectedShadowStyles.delete(style);
@@ -317,6 +329,31 @@
     }
   }
 
+  function scanDocumentWhenIdle() {
+    if (!shadowObserver) return;
+    if (typeof window.requestIdleCallback !== "function") {
+      scanForShadowRoots(document);
+      return;
+    }
+    const idleCallback = window.requestIdleCallback(() => {
+      shadowIdleCallbacks.delete(idleCallback);
+      if (shadowObserver) scanForShadowRoots(document);
+    }, { timeout: 1000 });
+    shadowIdleCallbacks.add(idleCallback);
+  }
+
+  function scheduleLateShadowScans() {
+    if (shadowRescansScheduled) return;
+    shadowRescansScheduled = true;
+    for (const delay of SHADOW_RESCAN_DELAYS_MS) {
+      const timer = window.setTimeout(() => {
+        shadowRescanTimers.delete(timer);
+        scanDocumentWhenIdle();
+      }, delay);
+      shadowRescanTimers.add(timer);
+    }
+  }
+
   function ensureShadowSupport() {
     if (!shadowObserver) {
       shadowObserver = new MutationObserver((mutations) => {
@@ -332,6 +369,7 @@
       shadowObserver.observe(document.documentElement, { childList: true, subtree: true });
     }
     scanForShadowRoots(document);
+    scheduleLateShadowScans();
   }
 
   function teardownShadowSupport() {
@@ -341,6 +379,13 @@
       window.clearTimeout(shadowScanTimer);
       shadowScanTimer = null;
     }
+    for (const timer of shadowRescanTimers) window.clearTimeout(timer);
+    shadowRescanTimers.clear();
+    if (typeof window.cancelIdleCallback === "function") {
+      for (const idleCallback of shadowIdleCallbacks) window.cancelIdleCallback(idleCallback);
+    }
+    shadowIdleCallbacks.clear();
+    shadowRescansScheduled = false;
     pendingShadowScans = new Set();
     for (const style of injectedShadowStyles) style.remove();
     injectedShadowStyles.clear();

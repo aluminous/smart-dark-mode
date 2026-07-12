@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Complex layout compatibility fixture</title>
+  <style>
+    html { background: #f7f7f7; }
+    body { min-height: 2400px; margin: 0; color: #1f2937; background: #f7f7f7; font-family: Arial, sans-serif; }
+    main { width: min(960px, calc(100% - 32px)); margin: 76px auto 0; }
+    section { margin: 18px 0; padding: 16px; border: 1px solid #b8c2cc; background: #fff; }
+    #fixed-toolbar { position: fixed; z-index: 20; inset: 0 0 auto; padding: 14px 20px; color: #fff; background: #234f8f; }
+    #sticky-toolbar { position: sticky; z-index: 10; top: 48px; padding: 10px; color: #3d2b00; background: #ffd873; }
+    iframe { width: 100%; height: 150px; border: 3px solid #8a5a00; background: #fff; }
+    .media-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+    .media-row > * { width: 180px; height: 100px; border: 1px solid #666; }
+    #filtered-image { filter: grayscale(1) blur(1px); }
+    dialog { color: #252525; background: #fff6d9; border: 2px solid #b7791f; }
+    .spacer { height: 900px; background: linear-gradient(#fff, #e7edf5); }
+  </style>
+</head>
+<body>
+  <header id="fixed-toolbar">Fixed enterprise toolbar</header>
+  <main>
+    <div id="sticky-toolbar">Sticky sub-navigation</div>
+
+    <section aria-labelledby="legacy-title">
+      <h1 id="legacy-title">Legacy table application</h1>
+      <table id="legacy-table" width="100%" cellpadding="8" cellspacing="2" border="1" bgcolor="#ffffff">
+        <tr bgcolor="#dbeafe"><th><font face="Arial" color="#003a75">Account</font></th><th>Status</th></tr>
+        <tr><td><font color="#7f1d1d">A-100</font></td><td bgcolor="#dcfce7">Approved</td></tr>
+      </table>
+    </section>
+
+    <section aria-labelledby="iframe-title">
+      <h2 id="iframe-title">Iframe application surfaces</h2>
+      <iframe id="app-frame" title="Legacy iframe app" srcdoc="<!doctype html><html><body style='margin:0;padding:16px;color:#222;background:#fff;font:16px Arial'><h3 style='margin-top:0'>Embedded application</h3><table border='1' cellpadding='6' bgcolor='#fef3c7'><tr><td>Light iframe workspace</td></tr></table></body></html>"></iframe>
+    </section>
+
+    <section aria-labelledby="shadow-title">
+      <h2 id="shadow-title">Shadow DOM variants</h2>
+      <div id="early-shadow-host"></div>
+      <div id="late-shadow-host"></div>
+      <div id="closed-shadow-host"></div>
+    </section>
+
+    <section aria-labelledby="media-title">
+      <h2 id="media-title">Media and authored filters</h2>
+      <div class="media-row">
+        <img id="plain-image" alt="Plain media" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='100'%3E%3Crect width='180' height='100' fill='%23ffcc33'/%3E%3Ccircle cx='55' cy='50' r='30' fill='%23006bd6'/%3E%3C/svg%3E">
+        <img id="filtered-image" alt="Filtered media" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='100'%3E%3Crect width='180' height='100' fill='%23ffcc33'/%3E%3Ccircle cx='55' cy='50' r='30' fill='%23006bd6'/%3E%3C/svg%3E">
+        <canvas id="document-canvas" width="180" height="100"></canvas>
+        <svg id="inline-svg" viewBox="0 0 180 100" aria-label="Inline illustration"><rect width="180" height="100" fill="#ffcc33"/><circle cx="55" cy="50" r="30" fill="#006bd6"/></svg>
+        <svg id="role-svg" role="img" viewBox="0 0 180 100" aria-label="Role image illustration"><rect width="180" height="100" fill="#ffcc33"/><circle cx="55" cy="50" r="30" fill="#006bd6"/></svg>
+      </div>
+    </section>
+
+    <dialog id="legacy-dialog" open>Open dialog in the top layer / legacy modal pattern</dialog>
+    <div class="spacer">Scroll area for fixed and sticky positioning tests</div>
+  </main>
+
+  <script>
+    const mediaMarkup = (id, label) => `
+      <p>${label}</p>
+      <img id="${id}" alt="${label}" width="180" height="100" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='100'%3E%3Crect width='180' height='100' fill='%23ffcc33'/%3E%3Ccircle cx='55' cy='50' r='30' fill='%23006bd6'/%3E%3C/svg%3E">
+    `;
+
+    const earlyRoot = document.getElementById('early-shadow-host').attachShadow({ mode: 'open' });
+    earlyRoot.innerHTML = mediaMarkup('early-shadow-image', 'Early open shadow root');
+
+    const closedRoot = document.getElementById('closed-shadow-host').attachShadow({ mode: 'closed' });
+    closedRoot.innerHTML = mediaMarkup('closed-shadow-image', 'Closed shadow root');
+    document.getElementById('closed-shadow-host').dataset.ready = 'true';
+
+    setTimeout(() => {
+      const lateRoot = document.getElementById('late-shadow-host').attachShadow({ mode: 'open' });
+      lateRoot.innerHTML = mediaMarkup('late-shadow-image', 'Late root on an existing host');
+      document.getElementById('late-shadow-host').dataset.ready = 'true';
+    }, 500);
+
+    const canvas = document.getElementById('document-canvas');
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#ffcc33';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#006bd6';
+    context.beginPath();
+    context.arc(55, 50, 30, 0, Math.PI * 2);
+    context.fill();
+
+    setTimeout(() => {
+      const fixed = document.getElementById('fixed-toolbar');
+      const sticky = document.getElementById('sticky-toolbar');
+      const earlyHost = document.getElementById('early-shadow-host');
+      const lateHost = document.getElementById('late-shadow-host');
+      const closedHost = document.getElementById('closed-shadow-host');
+      document.body.dataset.fixedTopBefore = String(fixed.getBoundingClientRect().top);
+      document.body.dataset.stickyTopBefore = String(sticky.getBoundingClientRect().top);
+      earlyHost.dataset.shadowStyle = String(Boolean(earlyRoot.querySelector('.auto-dark-mode-shadow-style')));
+      earlyHost.dataset.imageFilter = getComputedStyle(earlyRoot.querySelector('img')).filter;
+      lateHost.dataset.shadowStyle = String(Boolean(lateHost.shadowRoot?.querySelector('.auto-dark-mode-shadow-style')));
+      lateHost.dataset.imageFilter = getComputedStyle(lateHost.shadowRoot.querySelector('img')).filter;
+      closedHost.dataset.imageFilter = getComputedStyle(closedRoot.querySelector('img')).filter;
+      document.body.dataset.filteredImageFilter = getComputedStyle(document.getElementById('filtered-image')).filter;
+      document.body.dataset.iframeFilter = getComputedStyle(document.getElementById('app-frame')).filter;
+      window.scrollTo(0, 850);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.body.dataset.scrollY = String(window.scrollY);
+        document.body.dataset.fixedTopAfter = String(fixed.getBoundingClientRect().top);
+        document.body.dataset.stickyTopAfter = String(sticky.getBoundingClientRect().top);
+        document.body.dataset.compatReady = 'true';
+      }));
+    }, 2200);
+  </script>
+</body>
+</html>

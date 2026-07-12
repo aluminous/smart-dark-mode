@@ -13,7 +13,10 @@
   <div class="panel">The page should darken, but every image below should keep its original colors — including the ones inside open shadow roots.</div>
   <img alt="Light DOM sample" width="220" height="120" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Crect width='220' height='120' fill='%23ffcc33'/%3E%3Ccircle cx='70' cy='60' r='40' fill='%23006bd6'/%3E%3Crect x='120' y='25' width='70' height='70' fill='%23d60054'/%3E%3C/svg%3E">
   <div id="static-host"></div>
+  <div id="late-existing-host"></div>
   <div id="dynamic-slot"></div>
+  <div id="closed-host"></div>
+  <div id="exempt-closed-host" data-auto-dark-mode-exempt></div>
   <script>
     const image = (label) => `
       <p>${label}</p>
@@ -26,12 +29,33 @@
     const nestedRoot = staticRoot.getElementById('nested-host').attachShadow({ mode: 'open' });
     nestedRoot.innerHTML = image('Inside a nested shadow root');
 
+    const closedRoot = document.getElementById('closed-host').attachShadow({ mode: 'closed' });
+    closedRoot.innerHTML = image('Inside a closed shadow root (expected to invert)');
+
+    const exemptClosedRoot = document.getElementById('exempt-closed-host').attachShadow({ mode: 'closed' });
+    exemptClosedRoot.innerHTML = image('Inside an exempt closed host (expected to keep original colors)');
+
     setTimeout(() => {
       const host = document.createElement('div');
       document.getElementById('dynamic-slot').append(host);
       const dynamicRoot = host.attachShadow({ mode: 'open' });
       dynamicRoot.innerHTML = image('Inside a shadow root added after load');
     }, 1000);
+
+    setTimeout(() => {
+      const host = document.getElementById('late-existing-host');
+      const lateRoot = host.attachShadow({ mode: 'open' });
+      lateRoot.innerHTML = image('Inside a late root on an existing host');
+    }, 1000);
+
+    setTimeout(() => {
+      const lateRoot = document.getElementById('late-existing-host').shadowRoot;
+      document.body.dataset.lateShadowStyle = String(Boolean(lateRoot?.querySelector('.auto-dark-mode-shadow-style')));
+      document.body.dataset.lateImageFilter = lateRoot ? getComputedStyle(lateRoot.querySelector('img')).filter : 'missing';
+      document.body.dataset.closedHostFilter = getComputedStyle(document.getElementById('closed-host')).filter;
+      document.body.dataset.exemptClosedHostFilter = getComputedStyle(document.getElementById('exempt-closed-host')).filter;
+      document.body.dataset.shadowReady = 'true';
+    }, 3200);
   </script>
 </body>
 </html>

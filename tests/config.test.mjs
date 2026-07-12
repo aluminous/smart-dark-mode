@@ -62,6 +62,20 @@ test("disabled predefined rules are omitted while custom rules use the same sche
   );
 });
 
+test("custom rules follow predefined rules so explicit choices can override automatic behavior", () => {
+  const rules = Config.effectiveRulesForUrl(
+    "https://docs.google.com/spreadsheets/d/example/edit",
+    { customRules: [{ action: Config.RULE_ACTION_PRESERVE, selector: "canvas" }] }
+  );
+  assert.deepEqual(
+    rules.map(({ action, selector, source }) => ({ action, selector, source })),
+    [
+      { action: "invert", selector: "canvas", source: "predefined" },
+      { action: "preserve", selector: "canvas", source: "custom" }
+    ]
+  );
+});
+
 test("legacy excludeSelectors migrate to custom preserve rules", () => {
   const normalized = Config.normalizeSiteSettings({
     excludeSelectors: [".legacy", ".legacy", "  #logo  "]

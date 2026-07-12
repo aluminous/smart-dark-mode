@@ -34,7 +34,7 @@ npm run run:firefox
 - If the page is mostly light, a root `invert(1) hue-rotate(180deg)` filter is applied to the page.
 - Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
 - Shipped site rules invert document canvases on Google Sheets and Google Docs editor routes; matching built-in rules appear in the popup and can be disabled per site.
-- Open shadow roots get a copy of the exception rule so media inside web components is restored too; roots are discovered at activation and watched for as the page changes.
+- Open shadow roots get a copy of the exception rule so media inside web components is restored too; roots are discovered at activation, watched through DOM changes, and rescanned during the first ten seconds for late hydration.
 - Click the toolbar button to open a popup menu.
 - The popup can disable/enable the extension globally.
 - The popup keeps the global enable/disable control separate from Auto Mode and current-site controls.
@@ -43,6 +43,7 @@ npm run run:firefox
 - Per-site controls choose whether images/media are restored to original colors or inverted with the page.
 - Per-site controls can force canvases to invert with the page; when off, shipped compatibility rules decide automatically.
 - Built-in and user-created site rules share `preserve` and `invert` selector actions. The element picker includes broad tag choices such as `canvas` and can combine multiple choices into one custom `preserve` rule.
+- Explicit custom rules apply after built-in rules and media defaults, including when **Invert images** is enabled.
 - Per-site controls can add a direction-aware shadow around restored images and tune its strength for contrast.
 - Per-site controls can enable custom brightness and contrast sliders while pages are inverted.
 - Per-site controls can set the current site to Automatic, Always inverted, or Always original.
@@ -126,13 +127,19 @@ Manual fixtures are in `test-fixtures/` (described for the default Dark directio
 - `dark.html` should remain unchanged automatically.
 - `dynamic.html` should darken new content while active.
 - `mixed-media.html` should leave media elements visually unchanged.
-- `shadow-dom.html` should leave media inside open shadow roots visually unchanged, including a shadow root attached after load.
+- `shadow-dom.html` should leave media inside open shadow roots visually unchanged, including roots attached after load and to already-connected hosts. It also demonstrates closed-root host fallbacks.
+- `complex-layouts.html` covers iframes, early/late/closed shadow roots, authored media filters, inline SVG, dialogs, fixed/sticky positioning, and legacy table markup. Its `data-*` results make the structural checks inspectable after load.
+- `legacy-frameset.html` verifies that old `<frameset>`/`<frame>` applications still inherit the page inversion.
 
 Switch the Auto Mode direction to Light to verify the inverse: `dark.html` lightens automatically and `light.html` stays unchanged.
 
 ## Known limitations
 
 This implementation intentionally uses a simple page-level CSS filter. It is broad and consistent, but exception elements may not always be perfectly restored, especially with nested filtered content, cross-origin iframes, CSS background images, or complex compositing.
+
+- Iframes are preserved like media by default, so a full application embedded in an iframe can remain light. A site `invert` rule for `iframe` makes it follow the page inversion.
+- Open shadow roots attached more than ten seconds after activation may not be discovered when no light-DOM mutation accompanies the attachment. Closed shadow roots cannot be inspected; preserve the host with a site rule or `data-auto-dark-mode-exempt` when the whole component should retain its original colors.
+- Restoring media sets its `filter` property, replacing page-authored filters such as `grayscale()` or `blur()` while inversion is active.
 
 ## License
 
