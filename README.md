@@ -1,146 +1,153 @@
-# Smart Dark Mode Extension
+# Smart Dark Mode
 
-A WebExtension that detects whether a page is mostly light or dark. Mostly-light pages are darkened automatically by inverting color lightness while preserving hue where practical. The toolbar button persists a per-site override.
+Automatic, media-aware light and dark inversion for Firefox and Chromium browsers.
 
-## Load locally
+Smart Dark Mode samples the visible page, decides whether it matches your preferred direction, and applies a reversible color transformation when needed. Images and embedded media keep their original appearance by default, while per-site controls handle canvas-based editors and unusual layouts.
+
+<p align="center">
+  <img src="store-assets/screenshots/smart-dark-mode-popup.jpg" width="390" alt="Smart Dark Mode popup showing automatic direction, per-site controls, and site rules">
+</p>
+
+## Highlights
+
+- **Automatic in either direction.** Darken mostly-light pages or lighten mostly-dark pages.
+- **Media-aware rendering.** Images, video, canvases, iframes, objects, and embeds are restored by default instead of being color-inverted.
+- **Per-site control.** Choose Automatic, Always inverted, or Always original for each origin.
+- **Precision controls.** Tune the detection threshold, brightness, contrast, image shadows, and canvas behavior.
+- **Site rules.** Preserve or invert selected elements, combine selectors, and disable shipped compatibility rules.
+- **Google editor support.** Built-in rules correctly invert the canvas document surfaces used by Google Docs and Google Sheets.
+- **Dynamic-page support.** Handles DOM updates and open Shadow DOM, including late hydration during the first ten seconds.
+- **Local-first privacy.** No accounts, analytics, telemetry, remote code, or browsing-data transmission.
+
+## How it works
+
+1. A small grid of points across the visible viewport is sampled after the page loads.
+2. Composited background colors are converted to relative luminance and compared with the selected threshold.
+3. When inversion is needed, the document receives an `invert(1) hue-rotate(180deg)` filter with optional brightness and contrast correction.
+4. Media receives a counter-filter so photos, video, and embedded content remain natural.
+5. Built-in and custom site rules apply last, allowing explicit choices to override automatic behavior.
+
+The extension remembers the last automatic result for each origin to reduce flashes during navigation.
+
+## Site rules
+
+Rules use ordinary CSS selectors and are scoped to the current origin.
+
+| Rule | Effect |
+| --- | --- |
+| **Preserve** | Counter-inverts matching elements so they retain their original appearance. |
+| **Invert** | Leaves matching elements under the page inversion. Useful for canvas-based document surfaces. |
+| **Built-in** | A shipped compatibility rule for the current page. It can be disabled from the popup. |
+
+The element picker previews matches in pink before saving. Multiple checked selectors are stored as one comma-separated rule that matches any of them. Explicit custom rules take precedence over built-in rules and media defaults, including when **Invert images** is enabled.
+
+## Install locally
 
 ### Firefox
 
-Option 1, temporary add-on:
+Temporary installation:
 
-1. Open Firefox.
-2. Go to `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on...**.
-4. Select this repository's `manifest.json`.
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Select **Load Temporary Add-on…**.
+3. Choose this repository's `manifest.json`.
 
-Option 2, `web-ext`:
+Or launch a development profile:
 
 ```sh
 npm install
 npm run run:firefox
 ```
 
-### Chrome
+The Firefox manifest targets Firefox 142 or newer.
 
-1. Prepare the Chrome build directory with `npm run stage:chrome`.
-2. Open `chrome://extensions`.
-3. Enable **Developer mode**.
-4. Click **Load unpacked** and select `build/chrome`.
-
-## Behavior
-
-- Automatic mode samples visible viewport backgrounds to classify a page.
-- The extension runs at `document_start` and reuses the last same-origin inverted/original result to reduce navigation flicker before full detection completes.
-- If the page is mostly light, a root `invert(1) hue-rotate(180deg)` filter is applied to the page.
-- Images, videos, canvases, iframes, objects, embeds, and explicit exception elements receive the same filter again so they render close to their original appearance.
-- Shipped site rules invert document canvases on Google Sheets and Google Docs editor routes; matching built-in rules appear in the popup and can be disabled per site.
-- Open shadow roots get a copy of the exception rule so media inside web components is restored too; roots are discovered at activation, watched through DOM changes, and rescanned during the first ten seconds for late hydration.
-- Click the toolbar button to open a popup menu.
-- The popup can disable/enable the extension globally.
-- The popup keeps the global enable/disable control separate from Auto Mode and current-site controls.
-- Auto Mode chooses an automatic direction: darken mostly-light pages (Dark) or lighten mostly-dark pages (Light).
-- Auto Mode includes a threshold slider for choosing how bright a page must be before automatic inversion applies.
-- Per-site controls choose whether images/media are restored to original colors or inverted with the page.
-- Per-site controls can force canvases to invert with the page; when off, shipped compatibility rules decide automatically.
-- Built-in and user-created site rules share `preserve` and `invert` selector actions. The element picker includes broad tag choices such as `canvas` and can combine multiple choices into one custom `preserve` rule.
-- Explicit custom rules apply after built-in rules and media defaults, including when **Invert images** is enabled.
-- Per-site controls can add a direction-aware shadow around restored images and tune its strength for contrast.
-- Per-site controls can enable custom brightness and contrast sliders while pages are inverted.
-- Per-site controls can set the current site to Automatic, Always inverted, or Always original.
-- Right-click the toolbar button and choose **Reset site to Automatic** to remove the site override.
-- The toolbar badge shows `A` when auto mode inverted the current page, `I`/`O` for per-site Always inverted/Always original overrides, `OFF` when globally disabled, and nothing when auto mode left the page unchanged.
-- The popup shows what auto mode decided for the current page while the site is in Automatic mode.
-
-## Manifests and packaging
-
-The root `manifest.json` is the Firefox development manifest. Browser-specific release manifests live in `manifests/`:
-
-- `manifests/manifest.firefox.json` uses Firefox MV3 `background.scripts`, includes the Gecko ID `smart-dark-mode@alumino.us`, and declares no data collection.
-- `manifests/manifest.chrome.json` uses Chrome MV3 `background.service_worker`.
-- `_locales/` provides English and Korean localization.
-
-Install development dependencies first if you want `web-ext` commands:
+### Chrome / Chromium
 
 ```sh
 npm install
+npm run stage:chrome
 ```
 
-Stage unpacked browser-specific build directories with:
+Then open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `build/chrome`.
+
+## Permissions and privacy
+
+Smart Dark Mode processes pages entirely in the browser. Settings and per-site choices are saved with extension storage and are not sent anywhere.
+
+| Permission | Why it is used |
+| --- | --- |
+| `storage` | Saves global preferences, per-site settings, and automatic results. |
+| `activeTab` | Reads the current tab when the popup is opened. |
+| `contextMenus` | Adds **Reset site to Automatic** to the toolbar-button menu. |
+| `<all_urls>` | Allows the content script to detect and transform pages where the extension is enabled. |
+
+The extension contains no analytics, telemetry, advertising, remote scripts, or network requests. The Firefox manifest explicitly declares no data collection.
+
+## Development
+
+### Validate and test
 
 ```sh
-npm run stage:firefox  # build/firefox
-npm run stage:chrome   # build/chrome
-npm run stage            # both build directories
-```
-
-PNG toolbar icons are generated from the SVG sources automatically during staging/builds with `npm run icons`.
-
-Package release archives with `web-ext`:
-
-```sh
-npm run build:firefox    # package build/firefox into dist/firefox/
-npm run build:chrome     # package build/chrome into dist/chrome/
-npm run build            # package both browser builds
-npm run clean
-```
-
-The `package:*` scripts are aliases for the corresponding `build:*` scripts.
-
-`web-ext` helpers:
-
-```sh
-npm run lint:firefox
-npm run run:firefox
-npm run run:chrome
-npm run package:firefox
-npm run package:chrome
-```
-
-`web-ext` can build either manifest variant. Firefox packages are written under `dist/firefox/`; Chrome/Chromium packages are written under `dist/chrome/`.
-
-## CI/CD
-
-GitHub Actions workflows live in `.github/workflows/`:
-
-- `ci.yml` runs validation, Firefox linting, and both browser builds on pushes and pull requests.
-- `release.yml` is manually triggered. It builds both packages, creates a GitHub release with notes generated from git commits, and attempts to publish to AMO and the Chrome Web Store.
-
-Store publishing is skipped with a workflow warning unless the relevant secrets are configured:
-
-- Firefox: `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`
-- Chrome: `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`
-
-## Development validation
-
-Open pages listen for extension storage changes, so global and per-site settings apply to already-open tabs without requiring the broad `tabs` permission.
-
-Run validation and Firefox linting with:
-
-```sh
+npm test
 npm run validate
 npm run lint:firefox
 ```
 
-Manual fixtures are in `test-fixtures/` (described for the default Dark direction):
+Open pages listen for storage changes, so most setting updates apply without reloading the tab.
 
-- `light.html` should darken automatically.
-- `dark.html` should remain unchanged automatically.
-- `dynamic.html` should darken new content while active.
-- `mixed-media.html` should leave media elements visually unchanged.
-- `shadow-dom.html` should leave media inside open shadow roots visually unchanged, including roots attached after load and to already-connected hosts. It also demonstrates closed-root host fallbacks.
-- `complex-layouts.html` covers iframes, early/late/closed shadow roots, authored media filters, inline SVG, dialogs, fixed/sticky positioning, and legacy table markup. Its `data-*` results make the structural checks inspectable after load.
-- `legacy-frameset.html` verifies that old `<frameset>`/`<frame>` applications still inherit the page inversion.
+### Stage and package
 
-Switch the Auto Mode direction to Light to verify the inverse: `dark.html` lightens automatically and `light.html` stays unchanged.
+```sh
+npm run stage:firefox   # build/firefox
+npm run stage:chrome    # build/chrome
+npm run stage           # both unpacked builds
+
+npm run build:firefox   # dist/firefox/*.zip
+npm run build:chrome    # dist/chrome/*.zip
+npm run build           # both release archives
+```
+
+PNG toolbar icons are generated from the SVG source during staging and builds. Browser-specific release manifests live in `manifests/`; the root manifest is used for Firefox development.
+
+### Project layout
+
+```text
+src/             content script, popup, picker, background, and shared config
+manifests/       Firefox and Chrome release manifests
+icons/           SVG icon sources and generated PNG sizes
+brand/           logo explorations and future identity assets
+test-fixtures/   manual compatibility pages
+tests/           Node-based rule and configuration tests
+store-assets/    listing screenshots and promotional assets
+scripts/         build, icon, and store-publishing helpers
+```
+
+<details>
+<summary>Manual compatibility fixtures</summary>
+
+- `light.html` and `dark.html` exercise automatic detection in both directions.
+- `dynamic.html` covers content added after activation.
+- `mixed-media.html` checks media restoration.
+- `site-rules.html` exercises the selector picker and custom preserve rules.
+- `shadow-dom.html` covers early, late, nested, and closed Shadow DOM.
+- `complex-layouts.html` covers iframes, authored filters, inline SVG, dialogs, fixed/sticky positioning, and legacy markup.
+- `legacy-frameset.html` checks old `<frameset>` and `<frame>` applications.
+
+</details>
+
+## Release automation
+
+GitHub Actions validates and builds both browser packages on pushes and pull requests. The manual release workflow creates release archives and can publish to AMO and the Chrome Web Store when the required secrets are configured.
 
 ## Known limitations
 
-This implementation intentionally uses a simple page-level CSS filter. It is broad and consistent, but exception elements may not always be perfectly restored, especially with nested filtered content, cross-origin iframes, CSS background images, or complex compositing.
+Smart Dark Mode intentionally uses a page-level CSS filter for broad, fast coverage. Some complex compositing cases cannot be perfectly restored.
 
-- Iframes are preserved like media by default, so a full application embedded in an iframe can remain light. A site `invert` rule for `iframe` makes it follow the page inversion.
-- Open shadow roots attached more than ten seconds after activation may not be discovered when no light-DOM mutation accompanies the attachment. Closed shadow roots cannot be inspected; preserve the host with a site rule or `data-auto-dark-mode-exempt` when the whole component should retain its original colors.
-- Restoring media sets its `filter` property, replacing page-authored filters such as `grayscale()` or `blur()` while inversion is active.
+- CSS background images cannot be independently counter-inverted.
+- Cross-origin iframes and nested filtered content may need a site rule.
+- Restoring media replaces its authored `filter` property while inversion is active.
+- Open shadow roots attached more than ten seconds after activation may be missed if no light-DOM mutation accompanies them.
+- Closed shadow roots cannot be inspected; preserve their host with a custom rule or `data-auto-dark-mode-exempt`.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

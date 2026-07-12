@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 128 128">
-  <defs>
-    <filter id="softGlow" x="8" y="8" width="112" height="112" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffffff" flood-opacity="0.28"/>
-    </filter>
-  </defs>
-  <rect x="16" y="16" width="96" height="96" rx="20" fill="#111111" filter="url(#softGlow)"/>
-  <path d="M84 18A44.8 44.8 0 1 0 110 88 37.6 37.6 0 0 1 84 18Z" transform="translate(16 16) scale(0.75)" fill="#f5f5f5"/>
+  <title>Contrast Orbit</title>
+  <rect x="16" y="16" width="96" height="96" rx="24" fill="#0F172A" stroke="#CBD5E1" stroke-opacity="0.35" stroke-width="2"/>
+  <ellipse cx="64" cy="64" rx="42" ry="24" fill="none" stroke="#60A5FA" stroke-width="7" transform="rotate(-28 64 64)"/>
+  <circle cx="64" cy="64" r="23" fill="#F8FAFC"/>
+  <path d="M64 41A23 23 0 0 1 64 87Z" fill="#1E3A8A"/>
+  <circle cx="100" cy="44" r="7" fill="#FBBF24"/>
+  <circle cx="28" cy="84" r="6" fill="#BFDBFE"/>
 </svg>

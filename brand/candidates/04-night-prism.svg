@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Night Prism</title>
+  <path d="M64 16 106 40V88L64 112 22 88V40Z" fill="#312E81"/>
+  <path d="M64 16 106 40V88L64 64Z" fill="#60A5FA"/>
+  <path d="M64 64 106 88 64 112Z" fill="#0F172A"/>
+  <path d="M64 34 90 64 64 94 38 64Z" fill="#F8FAFC"/>
+  <path d="M64 34 90 64 64 64Z" fill="#FBBF24"/>
+</svg>

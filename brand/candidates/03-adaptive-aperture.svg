@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Adaptive Aperture</title>
+  <rect x="16" y="16" width="96" height="96" rx="28" fill="#172554" stroke="#CBD5E1" stroke-opacity="0.35" stroke-width="2"/>
+  <path d="M64 27 84 47 64 58 44 47Z" fill="#F8FAFC"/>
+  <path d="M101 64 81 84 70 64 81 44Z" fill="#60A5FA"/>
+  <path d="M64 101 44 81 64 70 84 81Z" fill="#F8FAFC"/>
+  <path d="M27 64 47 44 58 64 47 84Z" fill="#60A5FA"/>
+  <rect x="54" y="54" width="20" height="20" rx="6" fill="#FBBF24" transform="rotate(45 64 64)"/>
+</svg>

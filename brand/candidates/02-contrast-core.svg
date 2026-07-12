@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Contrast Core</title>
+  <circle cx="64" cy="64" r="48" fill="#2563EB"/>
+  <path d="M64 27A37 37 0 0 0 64 101Z" fill="#F8FAFC"/>
+  <path d="M64 27A37 37 0 0 1 64 101Z" fill="#0F172A"/>
+  <circle cx="64" cy="64" r="37" fill="none" stroke="#BFDBFE" stroke-width="5"/>
+  <circle cx="64" cy="64" r="9" fill="#FBBF24"/>
+</svg>

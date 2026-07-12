@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Eclipse Switch</title>
+  <rect x="16" y="16" width="96" height="96" rx="24" fill="#111827" stroke="#CBD5E1" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="59" cy="57" r="29" fill="#F8FAFC"/>
+  <circle cx="72" cy="45" r="27" fill="#111827"/>
+  <path d="M38 88C51 99 75 102 94 89" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="94" cy="89" r="7" fill="#FBBF24"/>
+</svg>
