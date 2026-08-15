@@ -5,6 +5,7 @@
   const Config = globalThis.AutoDarkConfig;
   const message = Config.i18nMessage;
   const ROOT_ATTR = "data-auto-dark-mode";
+  const COUNTER_FILTER_VAR = "--auto-dark-mode-counter-filter";
   const PREVIEW_STYLE_ID = "auto-dark-mode-picker-preview";
   const MAX_CANDIDATES = 8;
   const BROAD_MATCH_THRESHOLD = 20;
@@ -22,12 +23,14 @@
   let toastTimer = null;
 
   // The host sits inside the page's inverted <html>, so it must counter-invert
-  // itself to keep its own colors. The media-filter variable is not usable
-  // here: it is undefined when the site inverts images.
+  // itself to keep its own colors. The counter-filter variable inherits from the
+  // root and already tracks the site's brightness/contrast correction; the media
+  // filter variable would not work here because it is undefined when the site
+  // inverts images, and it carries the image drop-shadow.
   function syncHostFilter() {
     if (!host) return;
     const inverted = document.documentElement.getAttribute(ROOT_ATTR) === "active";
-    host.style.filter = inverted ? "invert(1) hue-rotate(180deg)" : "";
+    host.style.filter = inverted ? `var(${COUNTER_FILTER_VAR}, ${Config.counterFilter()})` : "";
   }
 
   function buildUi() {

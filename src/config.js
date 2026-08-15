@@ -7,8 +7,17 @@
   const THRESHOLD_MIN = 0.35;
   const THRESHOLD_MAX = 0.75;
   const DEFAULT_AUTO_DIRECTION = "dark";
-  const DEFAULT_BRIGHTNESS = 1.06;
-  const DEFAULT_CONTRAST = 1.08;
+  // 100% leaves the inversion exactly as it renders with the correction off, so
+  // enabling the controls is a no-op until a slider moves. The softening these
+  // used to default to now lives in the inversion baseline below.
+  const DEFAULT_BRIGHTNESS = 1;
+  const DEFAULT_CONTRAST = 1;
+  const DEFAULT_INVERT = 0.9;
+  // invert(a) maps a channel to (1 - 2a)c + a: a slope of -(2a - 1) around 0.5.
+  // The inversion therefore carries its own contrast, 0.8 at the 90% default,
+  // and the custom contrast slider scales that slope rather than adding a
+  // separate contrast() pass.
+  const INVERT_SLOPE = 2 * DEFAULT_INVERT - 1;
   const DEFAULT_IMAGE_SHADOW_STRENGTH = 0.7;
   const IMAGE_SHADOW_STRENGTH_MIN = 0.1;
   const IMAGE_SHADOW_STRENGTH_MAX = 1;
@@ -59,6 +68,40 @@
 
   function normalizeContrast(value) {
     return normalizeCorrectionValue(value, DEFAULT_CONTRAST);
+  }
+
+  function filterAmount(value) {
+    return String(Number(value.toFixed(6)));
+  }
+
+  function inversionSlope(contrast) {
+    return INVERT_SLOPE * contrast;
+  }
+
+  // Root filter for an inverted page. A slope above 1 cannot come from invert()
+  // alone -- UAs clamp its amount to 1 -- so the surplus rides along as a
+  // contrast() term, which only the top of the contrast slider reaches.
+  // Identity terms are dropped so the common case stays at two functions.
+  function rootFilter(contrast = 1, brightness = 1) {
+    const slope = inversionSlope(contrast);
+    const parts = [`invert(${filterAmount(slope > 1 ? 1 : (1 + slope) / 2)})`];
+    if (slope > 1) parts.push(`contrast(${filterAmount(slope)})`);
+    parts.push("hue-rotate(180deg)");
+    if (brightness !== 1) parts.push(`brightness(${filterAmount(brightness)})`);
+    return parts.join(" ");
+  }
+
+  // Exact inverse of rootFilter, pre-applied to preserved elements so the two
+  // passes cancel. Brightness has to be undone first and the inversion last:
+  // the root scales invert()'s offset by its brightness, so undoing them in any
+  // other order only cancels when brightness is 1.
+  function counterFilter(contrast = 1, brightness = 1) {
+    const slope = inversionSlope(contrast);
+    const parts = [];
+    if (brightness !== 1) parts.push(`brightness(${filterAmount(1 / brightness)})`);
+    parts.push("hue-rotate(180deg)", "invert(1)");
+    if (slope !== 1) parts.push(`contrast(${filterAmount(1 / slope)})`);
+    return parts.join(" ");
   }
 
   function normalizeImageShadowStrength(value) {
@@ -208,6 +251,10 @@
     normalizeDirection,
     DEFAULT_BRIGHTNESS,
     DEFAULT_CONTRAST,
+    DEFAULT_INVERT,
+    INVERT_SLOPE,
+    rootFilter,
+    counterFilter,
     DEFAULT_IMAGE_SHADOW_STRENGTH,
     IMAGE_SHADOW_STRENGTH_MIN,
     IMAGE_SHADOW_STRENGTH_MAX,

@@ -9,10 +9,8 @@
   const DIRECTION_ATTR = "data-auto-dark-mode-direction";
   const INVERT_IMAGES_ATTR = "data-auto-dark-mode-invert-images";
   const ROOT_BACKGROUND_ATTR = "data-auto-dark-mode-root-background";
-  const BRIGHTNESS_VAR = "--auto-dark-mode-brightness";
-  const CONTRAST_VAR = "--auto-dark-mode-contrast";
-  const BRIGHTNESS_INVERSE_VAR = "--auto-dark-mode-brightness-inverse";
-  const CONTRAST_INVERSE_VAR = "--auto-dark-mode-contrast-inverse";
+  const ROOT_FILTER_VAR = "--auto-dark-mode-root-filter";
+  const COUNTER_FILTER_VAR = "--auto-dark-mode-counter-filter";
   const SHADOW_COLOR_VAR = "--auto-dark-mode-shadow-color";
   const MEDIA_FILTER_VAR = "--auto-dark-mode-media-filter";
   const RULE_PRESERVE_FILTER_VAR = "--auto-dark-mode-rule-preserve-filter";
@@ -215,17 +213,17 @@
     if (existing && appliedRuleSignature === signature) return;
     const style = existing || document.createElement("style");
     style.id = STYLE_ID;
-    // Brightness/contrast vars default to 1 (no correction) and the shadow color
-    // to transparent (no shadow); updateRootSettings sets them when enabled.
+    // The filter vars fall back to the uncorrected pair and the shadow color to
+    // transparent (no shadow); updateRootSettings overrides them when enabled.
     // Exception elements are counter-inverted so they keep their original look;
     // nested exceptions are excluded so they are not double-inverted.
     // The counter-invert filter lives in a custom property because custom
     // properties inherit across shadow boundaries, letting the per-shadow-root
-    // stylesheets reuse it.
+    // stylesheets and the picker's shadow host reuse it.
     style.textContent = `
       html[${ROOT_ATTR}="active"] {
-        filter: invert(1) hue-rotate(180deg) brightness(var(${BRIGHTNESS_VAR}, 1)) contrast(var(${CONTRAST_VAR}, 1)) !important;
-        ${RULE_PRESERVE_FILTER_VAR}: contrast(var(${CONTRAST_INVERSE_VAR}, 1)) brightness(var(${BRIGHTNESS_INVERSE_VAR}, 1)) invert(1) hue-rotate(180deg) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
+        filter: var(${ROOT_FILTER_VAR}, ${Config.rootFilter()}) !important;
+        ${RULE_PRESERVE_FILTER_VAR}: var(${COUNTER_FILTER_VAR}, ${Config.counterFilter()}) drop-shadow(0 2px 12px var(${SHADOW_COLOR_VAR}, transparent));
         ${FORCED_FILTER_VAR}: none;
       }
 
@@ -416,15 +414,11 @@
       root.style.removeProperty(SHADOW_COLOR_VAR);
     }
     if (customCorrection) {
-      root.style.setProperty(BRIGHTNESS_VAR, String(customBrightness));
-      root.style.setProperty(CONTRAST_VAR, String(customContrast));
-      root.style.setProperty(BRIGHTNESS_INVERSE_VAR, String(1 / customBrightness));
-      root.style.setProperty(CONTRAST_INVERSE_VAR, String(1 / customContrast));
+      root.style.setProperty(ROOT_FILTER_VAR, Config.rootFilter(customContrast, customBrightness));
+      root.style.setProperty(COUNTER_FILTER_VAR, Config.counterFilter(customContrast, customBrightness));
     } else {
-      root.style.removeProperty(BRIGHTNESS_VAR);
-      root.style.removeProperty(CONTRAST_VAR);
-      root.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
-      root.style.removeProperty(CONTRAST_INVERSE_VAR);
+      root.style.removeProperty(ROOT_FILTER_VAR);
+      root.style.removeProperty(COUNTER_FILTER_VAR);
     }
   }
 
@@ -459,10 +453,8 @@
     root.removeAttribute(INVERT_IMAGES_ATTR);
     root.removeAttribute(ROOT_BACKGROUND_ATTR);
     root.style.removeProperty(SHADOW_COLOR_VAR);
-    root.style.removeProperty(BRIGHTNESS_VAR);
-    root.style.removeProperty(CONTRAST_VAR);
-    root.style.removeProperty(BRIGHTNESS_INVERSE_VAR);
-    root.style.removeProperty(CONTRAST_INVERSE_VAR);
+    root.style.removeProperty(ROOT_FILTER_VAR);
+    root.style.removeProperty(COUNTER_FILTER_VAR);
     removeGlobalStyle();
     teardownShadowSupport();
   }
