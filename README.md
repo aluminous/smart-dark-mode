@@ -1,8 +1,10 @@
 # Smart Dark Mode
 
-Automatic, media-aware light and dark inversion for Firefox and Chromium browsers.
-
-Smart Dark Mode samples the visible page, decides whether it matches your preferred direction, and applies a reversible color transformation when needed. Images and embedded media keep their original appearance by default, while per-site controls handle canvas-based editors and unusual layouts.
+Smart Dark Mode is a Firefox and Chromium extension that adapts a page to your
+preferred light or dark direction. It samples the visible page and applies a
+reversible color transformation only when needed. Images and embedded media
+keep their original appearance by default. Per-site controls cover
+canvas-based editors and unusual layouts.
 
 <p align="center">
   <img src="store-assets/screenshots/smart-dark-mode-popup.jpg" width="390" alt="Smart Dark Mode popup showing automatic direction, per-site controls, and site rules">
@@ -10,14 +12,20 @@ Smart Dark Mode samples the visible page, decides whether it matches your prefer
 
 ## Highlights
 
-- **Automatic in either direction.** Darken mostly-light pages or lighten mostly-dark pages.
-- **Media-aware rendering.** Images, video, canvases, iframes, objects, and embeds are restored by default instead of being color-inverted.
-- **Per-site control.** Choose Automatic, Always inverted, or Always original for each origin.
-- **Precision controls.** Tune the detection threshold, brightness, contrast, image shadows, and canvas behavior.
-- **Site rules.** Preserve or invert selected elements, combine selectors, and disable shipped compatibility rules.
-- **Google editor support.** Built-in rules correctly invert the canvas document surfaces used by Google Docs and Google Sheets.
-- **Dynamic-page support.** Handles DOM updates and open Shadow DOM, including late hydration during the first ten seconds.
-- **Local-first privacy.** No accounts, analytics, telemetry, remote code, or browsing-data transmission.
+- Darken mostly light pages or lighten mostly dark pages automatically.
+- Leave images, video, canvases, iframes, objects, and embeds unchanged by
+  default rather than inverting them with the page.
+- Choose Automatic, Always inverted, or Always original for each origin.
+- Adjust the detection threshold, brightness, contrast, image shadows, and
+  canvas behavior.
+- Preserve or invert selected elements, combine selectors, and disable bundled
+  compatibility rules.
+- Use built-in rules for the canvas document surfaces in Google Docs and Google
+  Sheets.
+- Handle DOM updates and open Shadow DOM, including late hydration during the
+  first ten seconds.
+- Keep browsing local: no accounts, analytics, telemetry, remote code, or
+  browsing-data transmission.
 
 ## How it works
 
